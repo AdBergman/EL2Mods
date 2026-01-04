@@ -2,46 +2,41 @@
 
 Quest Recovery is a small **single-player recovery mod** for *Endless Legend 2*.
 
-It provides a simple in-game button that lets you manually advance a **stuck major faction quest step**, intended for cases where a quest becomes blocked or fails to progress correctly during early access.
+It provides a simple in-game button that lets you **mark a stuck major faction quest step as completed**, allowing the quest chain to continue when a quest becomes blocked or fails to progress correctly during early access.
 
-This mod is designed to **unblock broken games**, not to automate gameplay or replace normal progression.
+This mod is designed to **unblock stuck quests**, not to automate gameplay or replace normal progression.
 
 ---
 
 ## What this mod does
 
-- Lets you manually advance the **current major faction quest step**
+- Marks the **current major faction quest step** as completed so the quest chain can continue
 - Uses the game’s internal quest progression logic
-- Requires an explicit, in-game click
-- Does nothing automatically
+- Requires an explicit, in-game click (no automatic actions)
 
----
-
-## What this mod does *not* do
-
-- ❌ No automation
-- ❌ No bulk quest skipping
+**Limitations:**
+- ❌ No automation or bulk quest skipping
 - ❌ No save-file editing
-- ❌ No multiplayer support
-
-**Multiplayer:**  
-Quest Recovery is automatically disabled in multiplayer games.  
-The UI will clearly indicate **SP-only**, and no actions are available.
+- ❌ Disabled in multiplayer (SP-only; no actions available)
 
 ---
+
 ![Quest Recovery overlay in the Quest window](screenshot.jpg)
+
 ---
 
 ## Installation
 
 ### 1. Install BepInEx
-1. Download **BepInEx 5.x (Windows x64 / Mono)**  
+1. Download **BepInEx 5.x (Windows x64)**  
    https://github.com/BepInEx/BepInEx/releases
+
+   BepInEx is a commonly used mod loader for Unity games. It does not modify game files and can be removed at any time.
+
 2. Extract it into your *Endless Legend 2* install directory
 3. Launch the game once to generate the `BepInEx` folders
 
 The game directory will typically be located at:
-
 ```
 C:\Program Files (x86)\Steam\steamapps\common\ENDLESS Legend 2\
 ```
@@ -50,10 +45,10 @@ C:\Program Files (x86)\Steam\steamapps\common\ENDLESS Legend 2\
 
 ### 2. Install Quest Recovery
 1. Download `QuestRecovery_v1.0.0.zip`
+   https://github.com/AdBergman/EL2Mods/releases/tag/v1.0.0
 2. Extract the contents into the *same directory that contains* `ENDLESS Legend 2.exe`  
    (so that `BepInEx/plugins/QuestRecovery/EL2.QuestRecovery.dll` exists)
 3. Launch the game
-
 
 ---
 
@@ -70,8 +65,10 @@ If the quest UI does not update immediately, end the turn or perform any action 
 
 ## Uninstall
 
-Delete the `QuestRecovery` folder from: BepInEx/plugins/
-
+Delete the `QuestRecovery` folder from: 
+```
+BepInEx/plugins/
+```
 
 ---
 
