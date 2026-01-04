@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using BepInEx.Logging;
+using EL2.QuestRecovery.Safety;
 using UnityEngine;
-using EL2.QuestRecovery.UI;
 
-namespace EL2.QuestRecovery
+namespace EL2.QuestRecovery.UI
 {
     public sealed class QuestRecoveryOverlay : MonoBehaviour
     {
@@ -191,6 +191,9 @@ namespace EL2.QuestRecovery
             EnsureStyles();
             EnsureDragger();
 
+            // fail-closed: only allow when explicitly confirmed single player
+            bool spAllowed = SafetyState.IsAllowed();
+
             if (!string.IsNullOrEmpty(_lastFeedback) && Time.realtimeSinceStartup > _feedbackUntilRealtime)
                 _lastFeedback = null;
 
@@ -203,15 +206,12 @@ namespace EL2.QuestRecovery
             }
 
             float panelHeight = CurrentPanelHeight();
-
-            // Initialize + get panel rect from helper (persistent + clamped)
             _dragger.EnsureInitialized(GetDefaultPanelPos(), PanelWidth, panelHeight);
             Rect panelRect = _dragger.GetRect(PanelWidth, panelHeight);
 
             GUILayout.BeginArea(panelRect, _panelStyle);
 
-            // Drag handle only on LEFT side of header, so it doesn't fight the buttons on the right.
-            // Coordinates are panel-local because we're inside BeginArea.
+            // Drag handle: keep it small and not on the Show/Hide button
             Rect dragHandleRect = new Rect(0f, 0f, 170f, 26f);
             _dragger.HandleDrag(dragHandleRect, PanelWidth, panelHeight);
 
@@ -220,15 +220,23 @@ namespace EL2.QuestRecovery
             GUILayout.Label("≡ Quest Recovery", _titleStyle);
             GUILayout.FlexibleSpace();
 
-            bool canSkip = SafeCanSkip();
+            if (!spAllowed)
+            {
+                // Short + unambiguous: this avoids the "No quest found" confusion in MP
+                GUILayout.Label("SP-only", _smallStyle);
+            }
+            else
+            {
+                bool rawCanSkip = SafeCanSkip();
 
-            bool signatureLockActive = QuestRecoveryTargetState.IsLocked();
-            bool fallbackLockActive = _skipUsedThisWindowOpen && string.IsNullOrWhiteSpace(currentSig);
-            bool locked = signatureLockActive || fallbackLockActive;
+                bool signatureLockActive = QuestRecoveryTargetState.IsLocked();
+                bool fallbackLockActive = _skipUsedThisWindowOpen && string.IsNullOrWhiteSpace(currentSig);
+                bool locked = signatureLockActive || fallbackLockActive;
 
-            if (locked) GUILayout.Label("Locked", _smallStyle);
-            else if (!canSkip) GUILayout.Label("Not ready", _smallStyle);
-            else GUILayout.Label("Ready", _smallStyle);
+                if (locked) GUILayout.Label("Locked", _smallStyle);
+                else if (!rawCanSkip) GUILayout.Label("Not ready", _smallStyle);
+                else GUILayout.Label("Ready", _smallStyle);
+            }
 
             GUILayout.Space(8);
 
@@ -237,6 +245,20 @@ namespace EL2.QuestRecovery
                 _panelExpanded = !_panelExpanded;
 
             GUILayout.EndHorizontal();
+
+            // If multiplayer (or not confirmed SP), keep the overlay informational only.
+            // Avoid misleading "waiting for quest data" / "no quest detected" messaging.
+            if (!spAllowed)
+            {
+                if (_panelExpanded)
+                {
+                    GUILayout.Space(6);
+                    GUILayout.Label("Quest Recovery is disabled in multiplayer games.", _smallStyle);
+                }
+
+                GUILayout.EndArea();
+                return;
+            }
 
             if (!_panelExpanded)
             {
@@ -257,11 +279,17 @@ namespace EL2.QuestRecovery
 
             GUILayout.Space(8);
 
-            // Action button
-            GUI.enabled = canSkip && !locked;
+            // Action gating (SP-only already ensured above)
+            bool canSkip = SafeCanSkip();
 
-            string buttonText = locked ? "Skip Quest (locked)" : "Skip Quest";
-            GUIStyle buttonStyle = (canSkip && !locked) ? _dangerButtonStyle : _buttonStyle;
+            bool signatureLock = QuestRecoveryTargetState.IsLocked();
+            bool fallbackLock = _skipUsedThisWindowOpen && string.IsNullOrWhiteSpace(currentSig);
+            bool lockedNow = signatureLock || fallbackLock;
+
+            GUI.enabled = canSkip && !lockedNow;
+
+            string buttonText = lockedNow ? "Skip Quest (locked)" : "Skip Quest";
+            GUIStyle buttonStyle = (canSkip && !lockedNow) ? _dangerButtonStyle : _buttonStyle;
 
             if (GUILayout.Button(buttonText, buttonStyle, GUILayout.ExpandWidth(true)))
             {
@@ -276,7 +304,7 @@ namespace EL2.QuestRecovery
 
             GUI.enabled = true;
 
-            // Minimal feedback line
+            // Minimal feedback line (SP-only section)
             if (!string.IsNullOrEmpty(_lastFeedback))
             {
                 GUILayout.Space(4);
@@ -287,7 +315,7 @@ namespace EL2.QuestRecovery
                 GUILayout.Space(4);
                 GUILayout.Label("Waiting for quest data...", _smallStyle);
             }
-            else if (locked)
+            else if (lockedNow)
             {
                 GUILayout.Space(4);
                 GUILayout.Label("Locked: progress the quest (end turn / trigger refresh).", _smallStyle);

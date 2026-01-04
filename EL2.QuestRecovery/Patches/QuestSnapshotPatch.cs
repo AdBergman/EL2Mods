@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using EL2.QuestRecovery.Safety;
 using HarmonyLib;
 using EL2.QuestRecovery.UI;
 
@@ -15,6 +16,7 @@ namespace EL2.QuestRecovery.Patches
             try
             {
                 object questController = InternalAccess.GetQuestController();
+
                 if (questController == null)
                     return;
 
