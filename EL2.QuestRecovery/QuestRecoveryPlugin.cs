@@ -1,14 +1,18 @@
 ﻿using BepInEx;
+using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
 using EL2.QuestRecovery.UI;
 
 namespace EL2.QuestRecovery
 {
-    [BepInPlugin("com.calmbreakfast.el2.questrecovery", "EL2 Quest Recovery", "0.0.1")]
+    [BepInPlugin("com.calmbreakfast.el2.questrecovery", "EL2 Quest Recovery", "1.0.0")]
     public class QuestRecoveryPlugin : BaseUnityPlugin
     {
         internal static ManualLogSource Log;
+        internal static ConfigEntry<float> OverlayX;
+        internal static ConfigEntry<float> OverlayY;
+        
         private Harmony _harmony;
 
         private QuestRecoveryOverlay _overlay;
@@ -23,6 +27,8 @@ namespace EL2.QuestRecovery
             Logger.LogInfo("EL2 Quest Recovery Harmony patched.");
 
             // ✅ Create the overlay as a Unity component on the same GameObject as the plugin
+            OverlayX = Config.Bind("UI", "OverlayX", -1f, "Overlay X position in pixels. -1 = auto.");
+            OverlayY = Config.Bind("UI", "OverlayY", -1f, "Overlay Y position in pixels. -1 = auto.");
             _overlay = gameObject.AddComponent<QuestRecoveryOverlay>();
             _overlay.InitLogger(Logger);
 

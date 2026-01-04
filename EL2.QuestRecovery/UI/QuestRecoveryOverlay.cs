@@ -34,14 +34,17 @@ namespace EL2.QuestRecovery
 
         private const float PanelWidth = 300f;
 
-        // your tuned position
+        // Default tuned position (used only when no saved position exists)
         private const float MarginRight = 18f;
         private const float BaseOffsetLeft = 545f;
         private const float BaseOffsetDown = 60f;
 
-        // Panel heights (expanded must fit details + button + feedback)
+        // Panel heights
         private const float HeightCollapsed = 44f;
-        private const float HeightExpanded = 150f; // ✅ big enough so button stays inside
+        private const float HeightExpanded = 150f;
+
+        // Drag/persistence isolated in helper
+        private DraggablePanel _dragger;
 
         public void InitLogger(ManualLogSource logSource) => _log = logSource;
 
@@ -82,14 +85,17 @@ namespace EL2.QuestRecovery
             _stylesReady = true;
         }
 
-        private Rect ComputePanelRect()
+        private void EnsureDragger()
         {
-            float height = _panelExpanded ? HeightExpanded : HeightCollapsed;
+            if (_dragger != null) return;
 
-            float x = Screen.width - PanelWidth - MarginRight - BaseOffsetLeft;
-            float y = 18f + BaseOffsetDown;
-
-            return new Rect(x, y, PanelWidth, height);
+            _dragger = new DraggablePanel(
+                () => QuestRecoveryPlugin.OverlayX != null ? QuestRecoveryPlugin.OverlayX.Value : -1f,
+                () => QuestRecoveryPlugin.OverlayY != null ? QuestRecoveryPlugin.OverlayY.Value : -1f,
+                x => { if (QuestRecoveryPlugin.OverlayX != null) QuestRecoveryPlugin.OverlayX.Value = x; },
+                y => { if (QuestRecoveryPlugin.OverlayY != null) QuestRecoveryPlugin.OverlayY.Value = y; },
+                thresholdPx: 4f
+            );
         }
 
         private bool SafeCanSkip()
@@ -136,8 +142,6 @@ namespace EL2.QuestRecovery
             if (string.IsNullOrWhiteSpace(raw))
                 return "";
 
-            // Remove any line that contains "QuestIndex"
-            // (defensive, since labels may include it in multiple places).
             string[] lines = raw.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
             List<string> kept = new List<string>(lines.Length);
@@ -152,29 +156,40 @@ namespace EL2.QuestRecovery
                 kept.Add(line);
             }
 
-            // If nothing left, show nothing.
             if (kept.Count == 0) return "";
 
-            // Keep it concise: show up to 3 lines.
             int maxLines = Math.Min(3, kept.Count);
-
             return string.Join("\n", kept.GetRange(0, maxLines));
+        }
+
+        private Vector2 GetDefaultPanelPos()
+        {
+            float defaultX = Screen.width - PanelWidth - MarginRight - BaseOffsetLeft;
+            float defaultY = 18f + BaseOffsetDown;
+            return new Vector2(defaultX, defaultY);
+        }
+
+        private float CurrentPanelHeight()
+        {
+            return _panelExpanded ? HeightExpanded : HeightCollapsed;
         }
 
         private void OnGUI()
         {
             if (!UiState.IsQuestWindowOpen)
             {
-                // Window closed: reset short-lived UX state only
                 _skipUsedThisWindowOpen = false;
                 _lastSeenSignature = null;
 
                 _lastFeedback = null;
                 _feedbackUntilRealtime = 0f;
+
+                _dragger?.CancelDrag();
                 return;
             }
 
             EnsureStyles();
+            EnsureDragger();
 
             if (!string.IsNullOrEmpty(_lastFeedback) && Time.realtimeSinceStartup > _feedbackUntilRealtime)
                 _lastFeedback = null;
@@ -184,20 +199,29 @@ namespace EL2.QuestRecovery
             if (!string.IsNullOrWhiteSpace(currentSig) && currentSig != _lastSeenSignature)
             {
                 _lastSeenSignature = currentSig;
-                _skipUsedThisWindowOpen = false; // re-arm on change
+                _skipUsedThisWindowOpen = false;
             }
 
-            Rect panelRect = ComputePanelRect();
+            float panelHeight = CurrentPanelHeight();
+
+            // Initialize + get panel rect from helper (persistent + clamped)
+            _dragger.EnsureInitialized(GetDefaultPanelPos(), PanelWidth, panelHeight);
+            Rect panelRect = _dragger.GetRect(PanelWidth, panelHeight);
+
             GUILayout.BeginArea(panelRect, _panelStyle);
+
+            // Drag handle only on LEFT side of header, so it doesn't fight the buttons on the right.
+            // Coordinates are panel-local because we're inside BeginArea.
+            Rect dragHandleRect = new Rect(0f, 0f, 170f, 26f);
+            _dragger.HandleDrag(dragHandleRect, PanelWidth, panelHeight);
 
             // Header row: title + status + Show/Hide
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Quest Recovery", _titleStyle);
+            GUILayout.Label("≡ Quest Recovery", _titleStyle);
             GUILayout.FlexibleSpace();
 
             bool canSkip = SafeCanSkip();
 
-            // Prefer signature-based lock when available; fallback to per-window gating otherwise.
             bool signatureLockActive = QuestRecoveryTargetState.IsLocked();
             bool fallbackLockActive = _skipUsedThisWindowOpen && string.IsNullOrWhiteSpace(currentSig);
             bool locked = signatureLockActive || fallbackLockActive;
@@ -222,7 +246,7 @@ namespace EL2.QuestRecovery
 
             GUILayout.Space(6);
 
-            // ✅ Show a concise "details block" in the target area (no QuestIndex lines)
+            // Details block
             string rawTarget = SafeTargetLabel();
             string displayBlock = BuildDisplayBlockWithoutQuestIndex(rawTarget);
 
@@ -233,7 +257,7 @@ namespace EL2.QuestRecovery
 
             GUILayout.Space(8);
 
-            // Action button (single click)
+            // Action button
             GUI.enabled = canSkip && !locked;
 
             string buttonText = locked ? "Skip Quest (locked)" : "Skip Quest";
@@ -241,10 +265,7 @@ namespace EL2.QuestRecovery
 
             if (GUILayout.Button(buttonText, buttonStyle, GUILayout.ExpandWidth(true)))
             {
-                // Apply gating immediately to prevent spam clicks
                 _skipUsedThisWindowOpen = true;
-
-                // If signature exists, this becomes the real lock-until-change
                 QuestRecoveryTargetState.MarkApplied();
 
                 SetFeedback("Skip invoked.");
@@ -276,7 +297,7 @@ namespace EL2.QuestRecovery
                 GUILayout.Space(4);
                 GUILayout.Label("Quest cannot be skipped right now.", _smallStyle);
             }
-            
+
             GUILayout.EndArea();
         }
     }
