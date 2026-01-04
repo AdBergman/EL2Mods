@@ -91,6 +91,7 @@
         <Compile Include="QuestFinder.cs" />
         <Compile Include="QuestRecoveryPlugin.cs" />
         <Compile Include="UI\QuestRecoveryOverlay.cs" />
+        <Compile Include="UI\QuestRecoveryTargetState.cs" />
         <Compile Include="UI\UiState.cs" />
     </ItemGroup>
     <ItemGroup>

@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections;
 using HarmonyLib;
+using EL2.QuestRecovery.UI;
 
 namespace EL2.QuestRecovery.Patches
 {
     [HarmonyPatch(typeof(Amplitude.Mercury.Interop.QuestSnapshot), "Synchronize")]
     internal static class QuestSnapshotPatch
     {
-        // DEV: arm once, auto-complete the first MajorFaction quest we see, then disarm
-        private static bool _devAutoCompleteOnce = true;
-        private static string _devLastCompletedSignature = null;
+        private static string _lastTargetSignature = null;
 
         private static void Prefix()
         {
@@ -21,11 +20,11 @@ namespace EL2.QuestRecovery.Patches
 
                 IList quests = PatchHelper.ReadAsIList(questController, "Quests");
 
-                // If no quests yet, log "none" once (PatchLogger will gate it)
                 if (quests == null || quests.Count <= 0)
                 {
-                    PatchLogger.LogFactionQuestIfChanged(
-                        null, -1, "", "", -1, -1, "");
+                    _lastTargetSignature = null;
+                    QuestRecoveryTargetState.Clear();
+                    PatchLogger.LogFactionQuestIfChanged(null, -1, "", "", -1, -1, "");
                     return;
                 }
 
@@ -36,8 +35,9 @@ namespace EL2.QuestRecovery.Patches
 
                 if (!found)
                 {
-                    PatchLogger.LogFactionQuestIfChanged(
-                        null, -1, "", "", -1, -1, "");
+                    _lastTargetSignature = null;
+                    QuestRecoveryTargetState.Clear();
+                    PatchLogger.LogFactionQuestIfChanged(null, -1, "", "", -1, -1, "");
                     return;
                 }
 
@@ -60,20 +60,20 @@ namespace EL2.QuestRecovery.Patches
                 PatchLogger.LogFactionQuestIfChanged(
                     signature, questIndex, questDef, status, stepIndex, turnOfStepStart, pendingChoicesInfo);
 
-                // DEV one-shot action:
-                if (_devAutoCompleteOnce &&
-                    string.Equals(status, "InProgress", StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(pendingChoicesInfo, "null", StringComparison.OrdinalIgnoreCase) &&
-                    signature != _devLastCompletedSignature)
+                // ✅ UI target: only update when it actually changes
+                if (signature != _lastTargetSignature)
                 {
-                    QuestRecoveryPlugin.Log.LogInfo("[DEV] Auto-completing first faction quest once (then disarming). index=" + questIndex);
+                    _lastTargetSignature = signature;
 
-                    bool ok = InternalAccess.CompleteQuestStep(questIndex);
+                    // Friendly label (cheap, no extra reflection)
+                    string label =
+                        $"QuestIndex {questIndex}\n" +
+                        $"{questDef}\n" +
+                        $"Status: {status} | Step: {stepIndex} | Started: T{turnOfStepStart}\n" +
+                        $"PendingChoices: {pendingChoicesInfo}";
 
-                    _devLastCompletedSignature = signature;
-                    _devAutoCompleteOnce = false;
-
-                    QuestRecoveryPlugin.Log.LogInfo("[DEV] Auto-complete result: " + (ok ? "OK" : "FAILED"));
+                    // ✅ NEW: store signature into shared state so overlay can lock until it changes
+                    QuestRecoveryTargetState.Set(questIndex, label, signature);
                 }
             }
             catch (Exception ex)

@@ -1,8 +1,6 @@
-﻿using System;
-using BepInEx;
+﻿using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
-using UnityEngine;
 using EL2.QuestRecovery.UI;
 
 namespace EL2.QuestRecovery
@@ -54,25 +52,40 @@ namespace EL2.QuestRecovery
 
         private bool CanSkipNow()
         {
-            // TODO: return true only when you have a valid target quest in memory
-            // For now, allow it whenever the quest window is open.
-            return UiState.IsQuestWindowOpen;
+            // Only allow if the quest window is open AND we have a target AND no pending choices.
+            if (!UiState.IsQuestWindowOpen) return false;
+            if (!QuestRecoveryTargetState.HasTarget) return false;
+
+            // Optional: if you include PendingChoices in the label only, skip this.
+            // Better: store pendingChoicesInfo as a field later.
+            // For now, keep it simple and allow when target exists.
+            return true;
         }
 
         private string GetTargetLabel()
         {
-            // TODO: return a nice label from the quest you detected:
-            // e.g. "Main Quest: Chapter 2 – Step 3"
-            return "Target: (wire from QuestSnapshotPatch)";
+            if (!QuestRecoveryTargetState.HasTarget)
+                return "No target yet.\nOpen the Quest window and wait a moment.";
+
+            return QuestRecoveryTargetState.TargetLabel ?? $"QuestIndex={QuestRecoveryTargetState.QuestIndex}";
         }
 
         private void SkipCurrentQuestStep()
         {
-            // TODO: call your already-working completion logic here.
-            // Example (you will replace with your real call):
-            Log.LogWarning("[QuestRecovery] SkipCurrentQuestStep invoked (TODO: wire real target)");
+            if (!QuestRecoveryTargetState.HasTarget)
+            {
+                Log.LogWarning("[QuestRecovery] Skip requested but no target is available.");
+                return;
+            }
 
-            // InternalAccess.CompleteQuestStep(targetQuestSimulationIndex);
+            int questIndex = QuestRecoveryTargetState.QuestIndex;
+
+            Log.LogWarning($"[QuestRecovery] User confirmed: CompleteQuestStep questIndex={questIndex}");
+            bool ok = InternalAccess.CompleteQuestStep(questIndex);
+
+            if (!ok)
+                Log.LogWarning("[QuestRecovery] CompleteQuestStep failed.");
         }
+
     }
 }
