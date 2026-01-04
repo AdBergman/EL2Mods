@@ -29,6 +29,8 @@ Quest Recovery is automatically disabled in multiplayer games.
 The UI will clearly indicate **SP-only**, and no actions are available.
 
 ---
+![Quest Recovery overlay in the Quest window](screenshot.jpg)
+---
 
 ## Installation
 
