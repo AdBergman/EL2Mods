@@ -1,0 +1,7 @@
+﻿<Project>
+    <PropertyGroup>
+        <EL2InstallDir>$(ProgramFilesX86)\Steam\steamapps\common\ENDLESS Legend 2</EL2InstallDir>
+        <EL2ManagedDir>$(EL2InstallDir)\Endless Legend 2_Data\Managed</EL2ManagedDir>
+        <EL2BepInExCoreDir>$(EL2InstallDir)\BepInEx\core</EL2BepInExCoreDir>
+    </PropertyGroup>
+</Project>
