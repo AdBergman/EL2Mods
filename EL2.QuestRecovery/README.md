@@ -79,3 +79,9 @@ Delete the `QuestRecovery` folder from: BepInEx/plugins/
 
 This is a recovery tool for edge cases.  
 Always keep backups of important saves when using mods.
+
+---
+
+## License
+
+MIT License. See the root `LICENSE` file for details.
