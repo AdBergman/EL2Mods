@@ -69,8 +69,7 @@ namespace EL2.QuestRecovery.Patches
                     string label =
                         $"QuestIndex {questIndex}\n" +
                         $"{questDef}\n" +
-                        $"Status: {status} | Step: {stepIndex} | Started: T{turnOfStepStart}\n" +
-                        $"PendingChoices: {pendingChoicesInfo}";
+                        $"Status: {status} | Step: {stepIndex} | Started: T{turnOfStepStart}\n";
 
                     // ✅ NEW: store signature into shared state so overlay can lock until it changes
                     QuestRecoveryTargetState.Set(questIndex, label, signature);

@@ -41,7 +41,7 @@ namespace EL2.QuestRecovery
 
         // Panel heights (expanded must fit details + button + feedback)
         private const float HeightCollapsed = 44f;
-        private const float HeightExpanded = 170f; // ✅ big enough so button stays inside
+        private const float HeightExpanded = 150f; // ✅ big enough so button stays inside
 
         public void InitLogger(ManualLogSource logSource) => _log = logSource;
 
@@ -261,17 +261,22 @@ namespace EL2.QuestRecovery
                 GUILayout.Space(4);
                 GUILayout.Label(_lastFeedback, _smallStyle);
             }
+            else if (!QuestRecoveryTargetState.HasTarget || QuestRecoveryTargetState.QuestIndex < 0)
+            {
+                GUILayout.Space(4);
+                GUILayout.Label("Waiting for quest data...", _smallStyle);
+            }
             else if (locked)
             {
                 GUILayout.Space(4);
-                GUILayout.Label("Locked: progress the quest (end turn / trigger refresh) to re-arm.", _smallStyle);
+                GUILayout.Label("Locked: progress the quest (end turn / trigger refresh).", _smallStyle);
             }
             else if (!canSkip)
             {
                 GUILayout.Space(4);
-                GUILayout.Label("Quest requires a choice or is not recoverable.", _smallStyle);
+                GUILayout.Label("Quest cannot be skipped right now.", _smallStyle);
             }
-
+            
             GUILayout.EndArea();
         }
     }
