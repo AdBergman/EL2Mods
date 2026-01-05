@@ -83,12 +83,14 @@ After launching the game once, check that this file exists:
 ```
 ENDLESS Legend 2\BepInEx\LogOutput.log
 ```
-It should contain something like:
+You should see log entries similar to the following:
 ```
 [Info   :EL2 Quest Recovery] EL2 Quest Recovery loaded.
 [Info   :EL2 Quest Recovery] [Safety] SinglePlayer (sandbox snapshot: remoteLocal=0, remoteReplicated=0, serverId=0x0000000000000000, netSync=Unknown, remoteIds=[])
 [Info   :EL2 Quest Recovery] [FactionQuest] index=93 status=InProgress stepIndex=1 def=FactionQuest_KinOfSheredyn_Chapter05_Step01 turnStart=88 pendingChoices=null
 ```
+
+---
 
 #### 2. Make sure you are opening the full Quest screen
 The Quest Recovery panel only appears in the **full Quest window** (opened with `J`), not in smaller objective or notification panels.
