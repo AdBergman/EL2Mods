@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -8,14 +9,13 @@ using EL2.QuestRecovery.UI;
 namespace EL2.QuestRecovery
 {
     [BepInPlugin("com.calmbreakfast.el2.questrecovery", "EL2 Quest Recovery", "1.1.0")]
-    public class QuestRecoveryPlugin : BaseUnityPlugin
+    public sealed class QuestRecoveryPlugin : BaseUnityPlugin
     {
         internal static ManualLogSource Log;
         internal static ConfigEntry<float> OverlayX;
         internal static ConfigEntry<float> OverlayY;
 
         private Harmony _harmony;
-
         private QuestRecoveryOverlay _overlay;
 
         private void Awake()
@@ -27,20 +27,16 @@ namespace EL2.QuestRecovery
             _harmony.PatchAll();
             Logger.LogInfo("EL2 Quest Recovery Harmony patched.");
 
-            // ✅ Create the overlay as a Unity component on the same GameObject as the plugin
             OverlayX = Config.Bind("UI", "OverlayX", -1f, "Overlay X position in pixels. -1 = auto.");
             OverlayY = Config.Bind("UI", "OverlayY", -1f, "Overlay Y position in pixels. -1 = auto.");
 
             _overlay = gameObject.AddComponent<QuestRecoveryOverlay>();
             _overlay.InitLogger(Logger);
 
-            // ✅ Wire up overlay -> your mod state/actions
             _overlay.CanSkip = CanSkipNow;
             _overlay.GetTargetLabel = GetTargetLabel;
-            _overlay.SkipAction = SkipCurrentQuestStep;
-
-            // ✅ NEW: debug text provider (shown in overlay foldout)
             _overlay.GetGoalDebugText = GetGoalDebugText;
+            _overlay.SkipAction = SkipCurrentQuestStep;
 
             Logger.LogInfo("QuestRecoveryOverlay initialized.");
         }
@@ -49,7 +45,6 @@ namespace EL2.QuestRecovery
         {
             _harmony?.UnpatchSelf();
 
-            // Not strictly required, but tidy
             if (_overlay != null)
             {
                 Destroy(_overlay);
@@ -57,19 +52,17 @@ namespace EL2.QuestRecovery
             }
         }
 
-        // -----------------------------
-        // Wiring stubs (replace later)
-        // -----------------------------
-
         private bool CanSkipNow()
         {
-            // Only allow if the quest window is open AND we have a target AND no pending choices.
             if (!UiState.IsQuestWindowOpen) return false;
             if (!QuestRecoveryTargetState.HasTarget) return false;
 
-            // Optional: if you include PendingChoices in the label only, skip this.
-            // Better: store pendingChoicesInfo as a field later.
-            // For now, keep it simple and allow when target exists.
+            if (!string.Equals(QuestRecoveryTargetState.Status, "InProgress", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (!QuestRecoveryTargetState.IsPendingChoicesEmpty())
+                return false;
+
             return true;
         }
 
@@ -83,7 +76,6 @@ namespace EL2.QuestRecovery
 
         private string GetGoalDebugText()
         {
-            // Safe: overlay already catches exceptions, but keep this clean.
             return QuestRecoveryTargetState.GoalDebugText ?? "";
         }
 
@@ -97,11 +89,59 @@ namespace EL2.QuestRecovery
 
             int questIndex = QuestRecoveryTargetState.QuestIndex;
 
-            Log.LogWarning($"[QuestRecovery] User confirmed: CompleteQuestStep questIndex={questIndex}");
-            bool ok = InternalAccess.CompleteQuestStep(questIndex);
+            // Minimal log: only the NextQuest name.
+            TryLogNextQuestName(questIndex);
 
+            // Keep or remove depending on how quiet you want the mod to be.
+            Log.LogWarning(
+                $"[QuestRecovery] User confirmed: CompleteQuestStep questIndex={questIndex} status={QuestRecoveryTargetState.Status} pendingChoices={QuestRecoveryTargetState.PendingChoicesInfo}");
+
+            bool ok = InternalAccess.CompleteQuestStepAndFinalize(questIndex);
             if (!ok)
-                Log.LogWarning("[QuestRecovery] CompleteQuestStep failed.");
+                Log.LogWarning("[QuestRecovery] CompleteQuestStepAndFinalize failed.");
+        }
+
+        private void TryLogNextQuestName(int questIndex)
+        {
+            try
+            {
+                object questController = InternalAccess.GetQuestController();
+                if (questController == null)
+                    return;
+
+                IList quests = PatchHelper.ReadAsIList(questController, "Quests");
+                if (quests == null)
+                    return;
+
+                object questObj = PatchHelper.FindQuestByIndex(quests, questIndex);
+                if (questObj == null)
+                    return;
+
+                int stepIndex = PatchHelper.ReadInt(questObj, "StepIndex", -1);
+
+                object choiceDef = PatchHelper.ReadObj(questObj, "QuestChoiceDefinition");
+                object stepsObj = PatchHelper.ReadObj(choiceDef, "QuestSteps");
+
+                if (!(stepsObj is IList steps) || stepIndex < 0 || stepIndex >= steps.Count)
+                    return;
+
+                object stepObj = steps[stepIndex];
+                object nextQuestObj = PatchHelper.ReadObj(stepObj, "NextQuest");
+
+                string nextQuestName = PatchHelper.SafeToString(
+                    PatchHelper.ReadObj(nextQuestObj, "ElementName"));
+
+                if (string.IsNullOrWhiteSpace(nextQuestName))
+                    nextQuestName = "(none)";
+
+                Log.LogWarning(
+                    $"[QuestRecovery] NextQuest after questIndex={questIndex} stepIndex={stepIndex} => '{nextQuestName}'");
+            }
+            catch (Exception ex)
+            {
+                // Keep errors visible; they matter.
+                Log.LogError(ex);
+            }
         }
     }
 }
