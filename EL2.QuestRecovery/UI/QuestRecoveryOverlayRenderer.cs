@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace EL2.QuestRecovery.UI
 {
@@ -66,8 +67,8 @@ namespace EL2.QuestRecovery.UI
         {
             try
             {
-                if (_panelBgTex != null) UnityEngine.Object.Destroy(_panelBgTex);
-                if (_detailsBgTex != null) UnityEngine.Object.Destroy(_detailsBgTex);
+                if (_panelBgTex != null) Object.Destroy(_panelBgTex);
+                if (_detailsBgTex != null) Object.Destroy(_detailsBgTex);
             }
             catch { /* ignore */ }
         }

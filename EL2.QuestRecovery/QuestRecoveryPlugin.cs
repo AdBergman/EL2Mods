@@ -3,8 +3,8 @@ using System.Collections;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
-using HarmonyLib;
 using EL2.QuestRecovery.UI;
+using HarmonyLib;
 
 namespace EL2.QuestRecovery
 {

@@ -1,8 +1,8 @@
-﻿using HarmonyLib;
-using Amplitude.Mercury.UI;
+﻿using Amplitude.Mercury.UI;
 using Amplitude.Mercury.UI.Windows;
 using Amplitude.UI;
 using EL2.QuestRecovery.UI;
+using HarmonyLib;
 
 namespace EL2.QuestRecovery.Patches
 {

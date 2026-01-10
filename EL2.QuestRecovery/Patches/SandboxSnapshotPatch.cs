@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using HarmonyLib;
+using Amplitude.Mercury.Interop;
 using EL2.QuestRecovery.Safety;
+using HarmonyLib;
 
 namespace EL2.QuestRecovery.Patches
 {
-    [HarmonyPatch(typeof(Amplitude.Mercury.Interop.SandboxSnapshot), "Synchronize")]
+    [HarmonyPatch(typeof(SandboxSnapshot), "Synchronize")]
     internal static class SandboxSnapshotPatch
     {
         private static void Postfix(object simulationData)

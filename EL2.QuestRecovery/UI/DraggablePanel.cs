@@ -1,13 +1,14 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace EL2.QuestRecovery.UI
 {
     internal sealed class DraggablePanel
     {
-        private readonly System.Func<float> _getSavedX;
-        private readonly System.Func<float> _getSavedY;
-        private readonly System.Action<float> _saveX;
-        private readonly System.Action<float> _saveY;
+        private readonly Func<float> _getSavedX;
+        private readonly Func<float> _getSavedY;
+        private readonly Action<float> _saveX;
+        private readonly Action<float> _saveY;
 
         private bool _initialized;
         private float _x;
@@ -21,10 +22,10 @@ namespace EL2.QuestRecovery.UI
         private readonly float _thresholdPx;
 
         internal DraggablePanel(
-            System.Func<float> getSavedX,
-            System.Func<float> getSavedY,
-            System.Action<float> saveX,
-            System.Action<float> saveY,
+            Func<float> getSavedX,
+            Func<float> getSavedY,
+            Action<float> saveX,
+            Action<float> saveY,
             float thresholdPx = 4f)
         {
             _getSavedX = getSavedX;

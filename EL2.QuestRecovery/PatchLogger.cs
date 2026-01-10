@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace EL2.QuestRecovery
+﻿namespace EL2.QuestRecovery
 {
     internal static class PatchLogger
     {

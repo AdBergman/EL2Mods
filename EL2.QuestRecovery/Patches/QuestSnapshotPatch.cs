@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections;
-using HarmonyLib;
+using Amplitude.Mercury.Interop;
 using EL2.QuestRecovery.UI;
+using HarmonyLib;
 
 namespace EL2.QuestRecovery.Patches
 {
-    [HarmonyPatch(typeof(Amplitude.Mercury.Interop.QuestSnapshot), "Synchronize")]
+    [HarmonyPatch(typeof(QuestSnapshot), "Synchronize")]
     internal static class QuestSnapshotPatch
     {
         // Used for overlay updates and to avoid rebuilding label/debug text every tick.
