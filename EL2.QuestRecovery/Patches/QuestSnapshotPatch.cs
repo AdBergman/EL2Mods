@@ -91,7 +91,7 @@ namespace EL2.QuestRecovery.Patches
                 string goalDebugText = "";
                 try
                 {
-                    goalDebugText = QuestGoalDebugBuilder.BuildGoalDebug(questObj);
+                    goalDebugText = QuestGoalDetailsBuilder.BuildGoalDetails(questObj);
                 }
                 catch (Exception ex)
                 {

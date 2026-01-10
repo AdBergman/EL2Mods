@@ -87,10 +87,9 @@
         <Compile Include="Patches\QuestWindowVisibilityPatch.cs" />
         <Compile Include="Patches\SandboxSnapshotPatch.cs" />
         <Compile Include="PatchHelper.cs" />
-        <Compile Include="PatchLogger.cs" />
         <Compile Include="Properties\AssemblyInfo.cs"/>
         <Compile Include="QuestFinder.cs" />
-        <Compile Include="QuestGoalDebugBuilder.cs" />
+        <Compile Include="QuestGoalDetailsBuilder.cs" />
         <Compile Include="QuestRecoveryPlugin.cs" />
         <Compile Include="Safety\MultiplayerDetector.cs" />
         <Compile Include="Safety\SafetyState.cs" />

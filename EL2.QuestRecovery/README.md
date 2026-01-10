@@ -44,8 +44,8 @@ C:\Program Files (x86)\Steam\steamapps\common\ENDLESS Legend 2\
 ---
 
 ### 2. Install Quest Recovery
-1. Download `QuestRecovery_v1.0.0.zip`
-   https://github.com/AdBergman/EL2Mods/releases/tag/v1.0.0
+1. Download `QuestRecovery_v1.1.0.zip`
+   https://github.com/AdBergman/EL2Mods/releases/tag/v1.1.0
 2. Extract the contents into the *same directory that contains* `ENDLESS Legend 2.exe`  
    (so that `BepInEx/plugins/QuestRecovery/EL2.QuestRecovery.dll` exists)
 3. Launch the game
@@ -56,10 +56,10 @@ C:\Program Files (x86)\Steam\steamapps\common\ENDLESS Legend 2\
 
 1. Open the **Quest** window in-game
 2. A small **Quest Recovery** panel will appear
-3. If a recoverable quest step is detected, click **Skip Quest**
+3. If a recoverable quest step is detected, click **Complete Quest**
 4. The action is applied once and then locked until the quest state updates
 
-If the quest UI does not update immediately, end the turn or perform any action that triggers a game refresh.
+If the quest UI does not update immediately, end the turn or perform any action that triggers a game refresh (for example selecting an army with movement remaining).
 
 ---
 
@@ -97,16 +97,39 @@ The Quest Recovery panel only appears in the **full Quest window** (opened with 
 
 ---
 
-#### 3. High-resolution displays (4K / ultrawide)
-On very high resolutions (for example 3840×2160), the panel may initially appear **off-screen or behind other UI elements**.
-
-If this happens:
-1. Temporarily change your resolution to **1920×1080**
-2. Open the Quest screen (`J`)
-3. Drag the Quest Recovery panel into a visible location
-4. Switch back to your original resolution
-
+#### 3. The panel Overlaps UI elements
 The panel is **draggable** and will remember its position between games.
+
+---
+
+#### 4. The Quest completes but laters steps do not start
+Some quests depend on earlier conditions being met.
+
+If you manually complete a quest step that normally requires a specific action (for example building the Holy Oculum district), a later step that checks for that condition may not trigger as expected.
+
+---
+
+## Release notes
+
+### v1.1.0
+
+**New**
+- Optional **Details / Quest Goals** view
+- Shows raw quest goal information
+- Includes a **Copy** button for bug reporting
+- Disabled by default and has no effect unless explicitly enabled
+
+**Improved**
+- Quest completion now attempts to **finalize quest rewards correctly**
+- This includes most common rewards such as resources, items, units, faction traits, and councillors
+
+**Changed**
+- Renamed **Skip Quest** to **Complete Quest**
+- Improved internal safety checks to prevent repeated triggers
+
+**Notes**
+- The Details view is intentionally technical and may expose raw quest data
+- It can be safely ignored if you only need to unblock quest progression
 
 ---
 
