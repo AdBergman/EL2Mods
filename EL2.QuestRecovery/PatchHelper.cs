@@ -34,12 +34,29 @@ namespace EL2.QuestRecovery
         internal static int ReadInt(object obj, string memberName, int defaultValue)
         {
             object v = ReadObj(obj, memberName);
-            return v is int ? (int)v : defaultValue;
+            return v is int i ? i : defaultValue;
+        }
+
+        internal static string ReadString(object obj, string memberName, string defaultValue)
+        {
+            object v = ReadObj(obj, memberName);
+            if (v == null) return defaultValue;
+
+            if (v is string s) return s;
+
+            try { return v.ToString(); }
+            catch { return defaultValue; }
         }
 
         internal static IList ReadAsIList(object obj, string memberName)
         {
             return ReadObj(obj, memberName) as IList;
+        }
+
+        internal static Array ReadAsArray(object obj, string memberName)
+        {
+            object v = ReadObj(obj, memberName);
+            return v as Array;
         }
 
         internal static object FindQuestByIndex(IList quests, int index)
@@ -81,8 +98,5 @@ namespace EL2.QuestRecovery
             try { return v.ToString(); }
             catch { return ""; }
         }
-        
-        
-        
     }
 }

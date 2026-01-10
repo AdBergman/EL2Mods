@@ -7,12 +7,14 @@ namespace EL2.QuestRecovery.UI
         internal static volatile bool HasTarget;
         internal static volatile int QuestIndex = -1;
         internal static volatile string TargetLabel;
-        
+
+        // Debug text shown in overlay (real goal / prereq info)
+        internal static volatile string GoalDebugText;
+
         internal static volatile string CurrentSignature;
-        
         internal static volatile string LastAppliedSignature;
 
-        // Optional: timestamp to support a failsafe unlock later (we can ignore for now)
+        // Optional: timestamp to support a failsafe unlock later
         internal static DateTime LastAppliedAtUtc;
 
         internal static void Clear()
@@ -20,26 +22,54 @@ namespace EL2.QuestRecovery.UI
             HasTarget = false;
             QuestIndex = -1;
             TargetLabel = null;
+            GoalDebugText = null;
             CurrentSignature = null;
-            // NOTE: we intentionally do NOT clear LastAppliedSignature here.
+            // NOTE: LastAppliedSignature intentionally preserved
         }
-        
-        internal static void Set(int questIndex, string label)
+
+        // ─────────────────────────────────────────────────────────────
+        // Explicit setters (no ambiguous "Set")
+        // ─────────────────────────────────────────────────────────────
+
+        internal static void SetWithLabel(int questIndex, string label)
         {
             HasTarget = true;
             QuestIndex = questIndex;
             TargetLabel = label;
-            // CurrentSignature remains whatever the patch sets later.
         }
-        
-        internal static void Set(int questIndex, string label, string signature)
+
+        internal static void SetWithDebugText(int questIndex, string label, string goalDebugText)
+        {
+            HasTarget = true;
+            QuestIndex = questIndex;
+            TargetLabel = label;
+            GoalDebugText = goalDebugText;
+        }
+
+        internal static void SetWithSignature(int questIndex, string label, string signature)
         {
             HasTarget = true;
             QuestIndex = questIndex;
             TargetLabel = label;
             CurrentSignature = signature;
         }
-        
+
+        // Explicit “all fields” variant (useful in QuestSnapshotPatch)
+        internal static void SetFull(
+            int questIndex,
+            string label,
+            string signature,
+            string goalDebugText)
+        {
+            HasTarget = true;
+            QuestIndex = questIndex;
+            TargetLabel = label;
+            CurrentSignature = signature;
+            GoalDebugText = goalDebugText;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+
         internal static bool IsLocked()
         {
             return HasTarget
@@ -47,7 +77,7 @@ namespace EL2.QuestRecovery.UI
                    && CurrentSignature == LastAppliedSignature;
         }
 
-        // NEW: overlay will call this after user clicks Recover
+        // Overlay calls this after user clicks Recover
         internal static void MarkApplied()
         {
             LastAppliedSignature = CurrentSignature;

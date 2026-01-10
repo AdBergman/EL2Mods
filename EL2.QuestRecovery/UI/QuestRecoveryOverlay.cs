@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using BepInEx.Logging;
 using EL2.QuestRecovery.Safety;
 using UnityEngine;
@@ -12,9 +11,13 @@ namespace EL2.QuestRecovery.UI
         public Func<string> GetTargetLabel;
         public Action SkipAction;
 
+        // Debug text provider (wire from TargetState)
+        public Func<string> GetGoalDebugText;
+
         private ManualLogSource _log;
 
-        private bool _panelExpanded = false; // default collapsed
+        private bool _panelExpanded = false;   // Show/Hide toggle
+        private bool _detailsEnabled = false;  // Show Details toggle
 
         // Fallback gating (only used if signature is missing)
         private bool _skipUsedThisWindowOpen = false;
@@ -22,67 +25,41 @@ namespace EL2.QuestRecovery.UI
         // Track target changes to auto re-arm when the quest advances / refreshes
         private string _lastSeenSignature = null;
 
-        private string _lastFeedback = null;
-        private float _feedbackUntilRealtime = 0f;
+        // Transient feedback (e.g. "Copied.")
+        private string _transientFeedback = null;
+        private float _transientUntilRealtime = 0f;
 
-        private bool _stylesReady = false;
-        private GUIStyle _panelStyle;
-        private GUIStyle _titleStyle;
-        private GUIStyle _smallStyle;
-        private GUIStyle _buttonStyle;
-        private GUIStyle _dangerButtonStyle;
-
-        private const float PanelWidth = 300f;
-
-        // Default tuned position (used only when no saved position exists)
-        private const float MarginRight = 18f;
-        private const float BaseOffsetLeft = 545f;
-        private const float BaseOffsetDown = 60f;
-
-        // Panel heights
-        private const float HeightCollapsed = 44f;
-        private const float HeightExpanded = 150f;
+        // Details scroll (only used when needed; renderer will avoid scroll view otherwise)
+        private Vector2 _detailsScroll = Vector2.zero;
 
         // Drag/persistence isolated in helper
         private DraggablePanel _dragger;
 
+        // Renderer
+        private QuestRecoveryOverlayRenderer _renderer;
+
+        // Panel sizing
+        private const float PanelWidth = 360f;
+
+        // First launch default position (used only when config is unset / negative)
+        private static readonly Vector2 FirstLaunchDefaultPos = new Vector2(600f, 300f);
+
         public void InitLogger(ManualLogSource logSource) => _log = logSource;
 
-        private void EnsureStyles()
+        private void OnDestroy()
         {
-            if (_stylesReady) return;
-
-            _panelStyle = new GUIStyle(GUI.skin.box)
+            try
             {
-                padding = new RectOffset(10, 10, 10, 10)
-            };
+                _renderer?.Dispose();
+                _renderer = null;
+            }
+            catch { /* ignore */ }
+        }
 
-            _titleStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 13,
-                fontStyle = FontStyle.Bold
-            };
-
-            _smallStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 11,
-                wordWrap = true
-            };
-
-            _buttonStyle = new GUIStyle(GUI.skin.button)
-            {
-                fontSize = 12,
-                fixedHeight = 32
-            };
-
-            _dangerButtonStyle = new GUIStyle(GUI.skin.button)
-            {
-                fontSize = 12,
-                fixedHeight = 32,
-                fontStyle = FontStyle.Bold
-            };
-
-            _stylesReady = true;
+        private void EnsureRenderer()
+        {
+            if (_renderer != null) return;
+            _renderer = new QuestRecoveryOverlayRenderer();
         }
 
         private void EnsureDragger()
@@ -96,6 +73,28 @@ namespace EL2.QuestRecovery.UI
                 y => { if (QuestRecoveryPlugin.OverlayY != null) QuestRecoveryPlugin.OverlayY.Value = y; },
                 thresholdPx: 4f
             );
+        }
+
+        private void EnsureFirstLaunchDefaults()
+        {
+            try
+            {
+                if (QuestRecoveryPlugin.OverlayX == null || QuestRecoveryPlugin.OverlayY == null) return;
+
+                // If unset (your convention is -1), set a safe on-screen default.
+                if (QuestRecoveryPlugin.OverlayX.Value < 0f || QuestRecoveryPlugin.OverlayY.Value < 0f)
+                {
+                    QuestRecoveryPlugin.OverlayX.Value = FirstLaunchDefaultPos.x;
+                    QuestRecoveryPlugin.OverlayY.Value = FirstLaunchDefaultPos.y;
+                }
+            }
+            catch { /* ignore */ }
+        }
+
+        private Vector2 GetDefaultPanelPos()
+        {
+            // Used only when no saved position exists.
+            return FirstLaunchDefaultPos;
         }
 
         private bool SafeCanSkip()
@@ -122,6 +121,20 @@ namespace EL2.QuestRecovery.UI
             }
         }
 
+        private string SafeGoalDebugText()
+        {
+            try
+            {
+                if (GetGoalDebugText == null) return "";
+                return GetGoalDebugText() ?? "";
+            }
+            catch (Exception e)
+            {
+                _log?.LogWarning($"[QuestRecoveryOverlay] GetGoalDebugText threw: {e.Message}");
+                return "";
+            }
+        }
+
         private void SafeInvokeSkip()
         {
             try { SkipAction?.Invoke(); }
@@ -131,47 +144,24 @@ namespace EL2.QuestRecovery.UI
             }
         }
 
-        private void SetFeedback(string message, float seconds = 2.0f)
+        private void SetTransientFeedback(string message, float seconds = 1.6f)
         {
-            _lastFeedback = message;
-            _feedbackUntilRealtime = Time.realtimeSinceStartup + seconds;
+            _transientFeedback = message;
+            _transientUntilRealtime = Time.realtimeSinceStartup + seconds;
         }
 
-        private static string BuildDisplayBlockWithoutQuestIndex(string raw)
+        private void CopyToClipboard(string text)
         {
-            if (string.IsNullOrWhiteSpace(raw))
-                return "";
-
-            string[] lines = raw.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-
-            List<string> kept = new List<string>(lines.Length);
-            for (int i = 0; i < lines.Length; i++)
+            try
             {
-                string line = lines[i].Trim();
-                if (line.Length == 0) continue;
-
-                if (line.IndexOf("QuestIndex", StringComparison.OrdinalIgnoreCase) >= 0)
-                    continue;
-
-                kept.Add(line);
+                GUIUtility.systemCopyBuffer = text ?? "";
+                SetTransientFeedback("Copied.");
             }
-
-            if (kept.Count == 0) return "";
-
-            int maxLines = Math.Min(3, kept.Count);
-            return string.Join("\n", kept.GetRange(0, maxLines));
-        }
-
-        private Vector2 GetDefaultPanelPos()
-        {
-            float defaultX = Screen.width - PanelWidth - MarginRight - BaseOffsetLeft;
-            float defaultY = 18f + BaseOffsetDown;
-            return new Vector2(defaultX, defaultY);
-        }
-
-        private float CurrentPanelHeight()
-        {
-            return _panelExpanded ? HeightExpanded : HeightCollapsed;
+            catch (Exception e)
+            {
+                _log?.LogWarning($"[QuestRecoveryOverlay] Copy failed: {e.Message}");
+                SetTransientFeedback("Copy failed.");
+            }
         }
 
         private void OnGUI()
@@ -181,21 +171,25 @@ namespace EL2.QuestRecovery.UI
                 _skipUsedThisWindowOpen = false;
                 _lastSeenSignature = null;
 
-                _lastFeedback = null;
-                _feedbackUntilRealtime = 0f;
+                _transientFeedback = null;
+                _transientUntilRealtime = 0f;
 
                 _dragger?.CancelDrag();
+                _detailsScroll = Vector2.zero;
+
                 return;
             }
 
-            EnsureStyles();
+            EnsureRenderer();
             EnsureDragger();
+            EnsureFirstLaunchDefaults();
 
             // fail-closed: only allow when explicitly confirmed single player
             bool spAllowed = SafetyState.IsAllowed();
 
-            if (!string.IsNullOrEmpty(_lastFeedback) && Time.realtimeSinceStartup > _feedbackUntilRealtime)
-                _lastFeedback = null;
+            // Expire transient feedback (ONLY the toast; guidance is handled in renderer and does not fade)
+            if (!string.IsNullOrEmpty(_transientFeedback) && Time.realtimeSinceStartup > _transientUntilRealtime)
+                _transientFeedback = null;
 
             // Auto re-arm if the quest target changed
             string currentSig = QuestRecoveryTargetState.CurrentSignature;
@@ -203,130 +197,73 @@ namespace EL2.QuestRecovery.UI
             {
                 _lastSeenSignature = currentSig;
                 _skipUsedThisWindowOpen = false;
+                _detailsScroll = Vector2.zero;
             }
 
-            float panelHeight = CurrentPanelHeight();
+            // Gather current UI inputs
+            string rawTarget = SafeTargetLabel();
+            string detailsText = SafeGoalDebugText();
+            bool rawCanSkip = SafeCanSkip();
+
+            bool signatureLockActive = QuestRecoveryTargetState.IsLocked();
+            bool fallbackLockActive = _skipUsedThisWindowOpen && string.IsNullOrWhiteSpace(currentSig);
+            bool locked = signatureLockActive || fallbackLockActive;
+
+            float panelHeight = _renderer.ComputePanelHeight(_panelExpanded, _detailsEnabled, detailsText);
+
             _dragger.EnsureInitialized(GetDefaultPanelPos(), PanelWidth, panelHeight);
             Rect panelRect = _dragger.GetRect(PanelWidth, panelHeight);
 
-            GUILayout.BeginArea(panelRect, _panelStyle);
-
-            // Drag handle: keep it small and not on the Show/Hide button
-            Rect dragHandleRect = new Rect(0f, 0f, 170f, 26f);
+            // Drag handle: avoid buttons (same behavior as before)
+            Rect dragHandleRect = new Rect(panelRect.x, panelRect.y, 170f, 26f);
             _dragger.HandleDrag(dragHandleRect, PanelWidth, panelHeight);
 
-            // Header row: title + status + Show/Hide
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("≡ Quest Recovery", _titleStyle);
-            GUILayout.FlexibleSpace();
+            // Render
+            QuestRecoveryOverlayRenderer.RenderResult rr = _renderer.Draw(
+                panelRect: panelRect,
+                panelWidth: PanelWidth,
+                panelExpanded: _panelExpanded,
+                detailsEnabled: _detailsEnabled,
+                detailsScroll: _detailsScroll,
+                spAllowed: spAllowed,
+                canSkip: rawCanSkip,
+                locked: locked,
+                currentSig: currentSig,
+                rawTargetLabel: rawTarget,
+                detailsText: detailsText,
+                transientFeedback: _transientFeedback
+            );
 
-            if (!spAllowed)
+            // Apply UI actions
+            if (rr.ToggleExpandedClicked)
             {
-                // Short + unambiguous: this avoids the "No quest found" confusion in MP
-                GUILayout.Label("SP-only", _smallStyle);
-            }
-            else
-            {
-                bool rawCanSkip = SafeCanSkip();
-
-                bool signatureLockActive = QuestRecoveryTargetState.IsLocked();
-                bool fallbackLockActive = _skipUsedThisWindowOpen && string.IsNullOrWhiteSpace(currentSig);
-                bool locked = signatureLockActive || fallbackLockActive;
-
-                if (locked) GUILayout.Label("Locked", _smallStyle);
-                else if (!rawCanSkip) GUILayout.Label("Not ready", _smallStyle);
-                else GUILayout.Label("Ready", _smallStyle);
-            }
-
-            GUILayout.Space(8);
-
-            string toggleLabel = _panelExpanded ? "Hide" : "Show";
-            if (GUILayout.Button(toggleLabel, GUILayout.Width(56), GUILayout.Height(22)))
                 _panelExpanded = !_panelExpanded;
-
-            GUILayout.EndHorizontal();
-
-            // If multiplayer (or not confirmed SP), keep the overlay informational only.
-            // Avoid misleading "waiting for quest data" / "no quest detected" messaging.
-            if (!spAllowed)
-            {
-                if (_panelExpanded)
-                {
-                    GUILayout.Space(6);
-                    GUILayout.Label("Quest Recovery is disabled in multiplayer games.", _smallStyle);
-                }
-
-                GUILayout.EndArea();
-                return;
+                if (!_panelExpanded)
+                    _detailsScroll = Vector2.zero;
             }
 
-            if (!_panelExpanded)
+            if (rr.ToggleDetailsChanged)
             {
-                GUILayout.EndArea();
-                return;
+                _detailsEnabled = rr.NewDetailsEnabled;
+                _detailsScroll = Vector2.zero;
+                // Keep transient toast as-is; "Copied." fading is fine.
             }
 
-            GUILayout.Space(6);
+            if (rr.CopyClicked)
+            {
+                CopyToClipboard(detailsText ?? "");
+            }
 
-            // Details block
-            string rawTarget = SafeTargetLabel();
-            string displayBlock = BuildDisplayBlockWithoutQuestIndex(rawTarget);
-
-            if (!string.IsNullOrWhiteSpace(displayBlock))
-                GUILayout.Label(displayBlock, _smallStyle);
-            else
-                GUILayout.Label("No recoverable quest detected.", _smallStyle);
-
-            GUILayout.Space(8);
-
-            // Action gating (SP-only already ensured above)
-            bool canSkip = SafeCanSkip();
-
-            bool signatureLock = QuestRecoveryTargetState.IsLocked();
-            bool fallbackLock = _skipUsedThisWindowOpen && string.IsNullOrWhiteSpace(currentSig);
-            bool lockedNow = signatureLock || fallbackLock;
-
-            GUI.enabled = canSkip && !lockedNow;
-
-            string buttonText = lockedNow ? "Skip Quest (locked)" : "Skip Quest";
-            GUIStyle buttonStyle = (canSkip && !lockedNow) ? _dangerButtonStyle : _buttonStyle;
-
-            if (GUILayout.Button(buttonText, buttonStyle, GUILayout.ExpandWidth(true)))
+            if (rr.SkipClicked)
             {
                 _skipUsedThisWindowOpen = true;
                 QuestRecoveryTargetState.MarkApplied();
-
-                SetFeedback("Skip invoked.");
 
                 _log?.LogWarning("[QuestRecoveryOverlay] User clicked Skip Quest.");
                 SafeInvokeSkip();
             }
 
-            GUI.enabled = true;
-
-            // Minimal feedback line (SP-only section)
-            if (!string.IsNullOrEmpty(_lastFeedback))
-            {
-                GUILayout.Space(4);
-                GUILayout.Label(_lastFeedback, _smallStyle);
-            }
-            else if (!QuestRecoveryTargetState.HasTarget || QuestRecoveryTargetState.QuestIndex < 0)
-            {
-                GUILayout.Space(4);
-                GUILayout.Label("Waiting for quest data...", _smallStyle);
-            }
-            else if (lockedNow)
-            {
-                GUILayout.Space(4);
-                GUILayout.Label("Locked: progress the quest (end turn / trigger refresh).", _smallStyle);
-            }
-            else if (!canSkip)
-            {
-                GUILayout.Space(4);
-                GUILayout.Label("Quest cannot be skipped right now.", _smallStyle);
-            }
-
-            GUILayout.EndArea();
+            _detailsScroll = rr.NewDetailsScroll;
         }
     }
 }

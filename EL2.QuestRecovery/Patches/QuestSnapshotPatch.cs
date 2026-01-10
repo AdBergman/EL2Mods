@@ -16,7 +16,6 @@ namespace EL2.QuestRecovery.Patches
             try
             {
                 object questController = InternalAccess.GetQuestController();
-
                 if (questController == null)
                     return;
 
@@ -67,14 +66,24 @@ namespace EL2.QuestRecovery.Patches
                 {
                     _lastTargetSignature = signature;
 
-                    // Friendly label (cheap, no extra reflection)
                     string label =
                         $"QuestIndex {questIndex}\n" +
                         $"{questDef}\n" +
                         $"Status: {status} | Step: {stepIndex} | Started: T{turnOfStepStart}\n";
 
-                    // ✅ NEW: store signature into shared state so overlay can lock until it changes
-                    QuestRecoveryTargetState.Set(questIndex, label, signature);
+                    // ✅ Real goal/debug info (underlying prereq + ObjectiveLoreKey, etc)
+                    string goalDebugText = "";
+                    try
+                    {
+                        goalDebugText = QuestGoalDebugBuilder.BuildGoalDebug(questObj);
+                    }
+                    catch (Exception ex)
+                    {
+                        goalDebugText = "GoalDebugText build failed: " + ex.GetType().Name;
+                    }
+
+                    // Store all in shared state
+                    QuestRecoveryTargetState.SetFull(questIndex, label, signature, goalDebugText);
                 }
             }
             catch (Exception ex)
