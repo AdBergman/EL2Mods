@@ -11,13 +11,24 @@
     {
         internal static volatile SafetyMode Mode = SafetyMode.Unknown;
 
-        internal static void SetSinglePlayer() => Mode = SafetyMode.SinglePlayer;
-        internal static void SetMultiplayer() => Mode = SafetyMode.Multiplayer;
-        internal static void SetUnknown() => Mode = SafetyMode.Unknown;
+        internal static void SetSinglePlayer()
+        {
+            Mode = SafetyMode.SinglePlayer;
+        }
+
+        internal static void SetMultiplayer()
+        {
+            Mode = SafetyMode.Multiplayer;
+        }
+
+        internal static void SetUnknown()
+        {
+            Mode = SafetyMode.Unknown;
+        }
 
         internal static bool IsAllowed()
         {
-            // fail-closed
+            // fail-closed: only allow explicit single-player
             return Mode == SafetyMode.SinglePlayer;
         }
     }

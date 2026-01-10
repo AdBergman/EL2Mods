@@ -8,7 +8,11 @@ namespace EL2.QuestRecovery.Patches
     [HarmonyPatch(typeof(Amplitude.Mercury.Interop.QuestSnapshot), "Synchronize")]
     internal static class QuestSnapshotPatch
     {
+        // Used for overlay updates and to avoid rebuilding label/debug text every tick.
         private static string _lastTargetSignature;
+
+        // Used to log ONLY when the "current quest acquired/changed" event happens.
+        private static string _lastLoggedQuestKey;
 
         private static void Prefix()
         {
@@ -21,17 +25,14 @@ namespace EL2.QuestRecovery.Patches
                 IList quests = PatchHelper.ReadAsIList(questController, "Quests");
                 if (quests == null || quests.Count == 0)
                 {
-                    _lastTargetSignature = null;
-                    QuestRecoveryTargetState.Clear();
-                    PatchLogger.LogFactionQuestIfChanged(null, -1, "", "", -1, -1, "");
+                    ClearTarget();
                     return;
                 }
 
-                if (!QuestFinder.TryFindFirstPlayerMajorFactionQuestInProgress(quests, out int questIndex, out string questDef))
+                if (!QuestFinder.TryFindFirstPlayerMajorFactionQuestInProgress(
+                        quests, out int questIndex, out string questDef))
                 {
-                    _lastTargetSignature = null;
-                    QuestRecoveryTargetState.Clear();
-                    PatchLogger.LogFactionQuestIfChanged(null, -1, "", "", -1, -1, "");
+                    ClearTarget();
                     return;
                 }
 
@@ -44,6 +45,7 @@ namespace EL2.QuestRecovery.Patches
                 int turnOfStepStart = PatchHelper.ReadInt(questObj, "TurnOfStepStart", -1);
                 string pendingChoicesInfo = PatchHelper.GetArrayInfo(questObj, "PendingChoices");
 
+                // Signature for "same quest state" gating (overlay + internal)
                 string signature =
                     questIndex + "|" +
                     (questDef ?? "") + "|" +
@@ -52,11 +54,27 @@ namespace EL2.QuestRecovery.Patches
                     turnOfStepStart + "|" +
                     pendingChoicesInfo;
 
-                // Single, deduped status line
-                PatchLogger.LogFactionQuestIfChanged(
-                    signature, questIndex, questDef, status, stepIndex, turnOfStepStart, pendingChoicesInfo);
+                // Key for "new/current quest acquired" logging:
+                // we intentionally do NOT include PendingChoices to avoid noisy toggles.
+                string questKey =
+                    questIndex + "|" +
+                    (questDef ?? "") + "|" +
+                    status + "|" +
+                    stepIndex + "|" +
+                    turnOfStepStart;
 
-                // UI target: update only when it actually changes
+                // ✅ LOG LINE #1: only when quest changes / advances
+                if (questKey != _lastLoggedQuestKey)
+                {
+                    _lastLoggedQuestKey = questKey;
+
+                    // This should be your single "New/Current quest acquired" line.
+                    // (Keep it compact; the overlay still shows full details.)
+                    QuestRecoveryPlugin.Log.LogInfo(
+                        $"[FactionQuest] index={questIndex} status={status} stepIndex={stepIndex} def={questDef} turnStart={turnOfStepStart}");
+                }
+
+                // ✅ Overlay state: update only when something relevant changed
                 if (signature == _lastTargetSignature)
                     return;
 
@@ -68,6 +86,7 @@ namespace EL2.QuestRecovery.Patches
                     $"Status: {status} | Step: {stepIndex} | Started: T{turnOfStepStart}\n" +
                     $"PendingChoices: {pendingChoicesInfo}\n";
 
+                // Optional: keep goal text (even if you later decide to hide it via UI toggle)
                 string goalDebugText = "";
                 try
                 {
@@ -90,6 +109,17 @@ namespace EL2.QuestRecovery.Patches
             {
                 QuestRecoveryPlugin.Log.LogError(ex);
             }
+        }
+
+        private static void ClearTarget()
+        {
+            _lastTargetSignature = null;
+            _lastLoggedQuestKey = null;
+
+            QuestRecoveryTargetState.Clear();
+
+            // Don’t log anything here (no “none in progress” spam).
+            // If you still want ONE line when it disappears, do it in PatchLogger instead.
         }
     }
 }

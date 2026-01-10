@@ -4,16 +4,12 @@ namespace EL2.QuestRecovery
 {
     internal static class PatchLogger
     {
-        private static string _lastFactionQuestSignature = null;
+        private static string _lastFactionQuestSignature;
 
         internal static void LogFactionQuestIfChanged(
             string signature,
             int questIndex,
-            string questDef,
-            string status,
-            int stepIndex,
-            int turnOfStepStart,
-            string pendingChoicesInfo)
+            string questDef)
         {
             if (signature == _lastFactionQuestSignature)
                 return;
@@ -27,12 +23,9 @@ namespace EL2.QuestRecovery
             }
 
             QuestRecoveryPlugin.Log.LogInfo(
-                "[FactionQuest] index=" + questIndex +
-                " status=" + (string.IsNullOrEmpty(status) ? "?" : status) +
-                " stepIndex=" + stepIndex +
-                " def=" + (string.IsNullOrEmpty(questDef) ? "?" : questDef) +
-                " turnStart=" + turnOfStepStart +
-                " pendingChoices=" + pendingChoicesInfo
+                "[FactionQuest] current=" +
+                (string.IsNullOrEmpty(questDef) ? "?" : questDef) +
+                " (index=" + questIndex + ")"
             );
         }
     }

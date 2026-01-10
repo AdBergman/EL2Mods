@@ -14,7 +14,6 @@ namespace EL2.QuestRecovery
 
         private static Type _sandboxType;
         private static MemberInfo _sandboxQuestControllerMember; // FieldInfo or PropertyInfo
-
         private static MethodInfo _completeQuestStepMethod;
 
         internal static object GetQuestController()
@@ -29,30 +28,32 @@ namespace EL2.QuestRecovery
                 }
 
                 if (_sandboxType == null)
-                {
-                    QuestRecoveryPlugin.Log.LogWarning("Could not find Sandbox type via reflection.");
                     return null;
-                }
 
                 if (_sandboxQuestControllerMember == null)
                 {
                     // Prefer field if present (matches decompile: Sandbox.QuestController = this;)
                     FieldInfo f = _sandboxType.GetField("QuestController", AnyStatic);
-                    if (f != null) _sandboxQuestControllerMember = f;
+                    if (f != null)
+                    {
+                        _sandboxQuestControllerMember = f;
+                    }
                     else
                     {
                         PropertyInfo p = _sandboxType.GetProperty("QuestController", AnyStatic);
-                        if (p != null) _sandboxQuestControllerMember = p;
+                        if (p != null)
+                            _sandboxQuestControllerMember = p;
                     }
                 }
 
-                if (_sandboxQuestControllerMember is FieldInfo field)
+                FieldInfo field = _sandboxQuestControllerMember as FieldInfo;
+                if (field != null)
                     return field.GetValue(null);
 
-                if (_sandboxQuestControllerMember is PropertyInfo prop)
-                    return prop.GetValue(null);
+                PropertyInfo prop = _sandboxQuestControllerMember as PropertyInfo;
+                if (prop != null)
+                    return prop.GetValue(null, null);
 
-                QuestRecoveryPlugin.Log.LogWarning("Sandbox.QuestController not found (field/property).");
                 return null;
             }
             catch (Exception ex)
@@ -68,10 +69,7 @@ namespace EL2.QuestRecovery
             {
                 object questController = GetQuestController();
                 if (questController == null)
-                {
-                    QuestRecoveryPlugin.Log.LogWarning("CompleteQuestStep: QuestController is null.");
                     return false;
-                }
 
                 // Cache MethodInfo once per runtime (QuestController type is stable)
                 if (_completeQuestStepMethod == null)
@@ -85,22 +83,17 @@ namespace EL2.QuestRecovery
                         modifiers: null);
 
                     if (_completeQuestStepMethod == null)
-                    {
-                        QuestRecoveryPlugin.Log.LogWarning(
-                            "CompleteQuestStep: method not found on QuestController type " + qcType.FullName);
                         return false;
-                    }
                 }
 
                 _completeQuestStepMethod.Invoke(questController, new object[] { questIndex });
-                QuestRecoveryPlugin.Log.LogInfo("CompleteQuestStep invoked for questIndex=" + questIndex);
                 return true;
             }
             catch (TargetInvocationException tie)
             {
                 QuestRecoveryPlugin.Log.LogError(
                     "[QuestRecovery] CompleteQuestStep threw: " +
-                    (tie.InnerException?.ToString() ?? tie.ToString()));
+                    (tie.InnerException != null ? tie.InnerException.ToString() : tie.ToString()));
                 return false;
             }
             catch (Exception ex)
@@ -122,10 +115,7 @@ namespace EL2.QuestRecovery
 
             try
             {
-                int finalized = FinalizeTwoStepRewardSpawns(questIndex);
-                if (finalized > 0)
-                    QuestRecoveryPlugin.Log.LogInfo(
-                        $"[QuestRecovery] Finalized {finalized} two-step reward spawns for questIndex={questIndex}");
+                FinalizeTwoStepRewardSpawns(questIndex);
             }
             catch (Exception ex)
             {
@@ -207,7 +197,7 @@ namespace EL2.QuestRecovery
                 {
                     QuestRecoveryPlugin.Log.LogError(
                         "[QuestRecovery] EndSpawnEntities threw: " +
-                        (tie.InnerException?.ToString() ?? tie.ToString()));
+                        (tie.InnerException != null ? tie.InnerException.ToString() : tie.ToString()));
                 }
                 catch (Exception ex)
                 {

@@ -18,14 +18,21 @@ namespace EL2.QuestRecovery
         private Harmony _harmony;
         private QuestRecoveryOverlay _overlay;
 
+        // Optional: keep startup quiet if you want (set to false to keep current behavior).
+        private const bool LogStartupLines = true;
+
         private void Awake()
         {
             Log = Logger;
-            Logger.LogInfo("EL2 Quest Recovery loaded.");
+
+            if (LogStartupLines)
+                Log.LogInfo("EL2 Quest Recovery loaded.");
 
             _harmony = new Harmony("com.calmbreakfast.el2.questrecovery");
             _harmony.PatchAll();
-            Logger.LogInfo("EL2 Quest Recovery Harmony patched.");
+
+            if (LogStartupLines)
+                Log.LogInfo("EL2 Quest Recovery Harmony patched.");
 
             OverlayX = Config.Bind("UI", "OverlayX", -1f, "Overlay X position in pixels. -1 = auto.");
             OverlayY = Config.Bind("UI", "OverlayY", -1f, "Overlay Y position in pixels. -1 = auto.");
@@ -38,7 +45,8 @@ namespace EL2.QuestRecovery
             _overlay.GetGoalDebugText = GetGoalDebugText;
             _overlay.SkipAction = SkipCurrentQuestStep;
 
-            Logger.LogInfo("QuestRecoveryOverlay initialized.");
+            if (LogStartupLines)
+                Log.LogInfo("QuestRecoveryOverlay initialized.");
         }
 
         private void OnDestroy()
@@ -52,7 +60,7 @@ namespace EL2.QuestRecovery
             }
         }
 
-        private bool CanSkipNow()
+        private static bool CanSkipNow()
         {
             if (!UiState.IsQuestWindowOpen) return false;
             if (!QuestRecoveryTargetState.HasTarget) return false;
@@ -60,13 +68,14 @@ namespace EL2.QuestRecovery
             if (!string.Equals(QuestRecoveryTargetState.Status, "InProgress", StringComparison.OrdinalIgnoreCase))
                 return false;
 
+            // Don’t allow skipping when there are choices (branching / selection pending).
             if (!QuestRecoveryTargetState.IsPendingChoicesEmpty())
                 return false;
 
             return true;
         }
 
-        private string GetTargetLabel()
+        private static string GetTargetLabel()
         {
             if (!QuestRecoveryTargetState.HasTarget)
                 return "No target yet.\nOpen the Quest window and wait a moment.";
@@ -74,12 +83,12 @@ namespace EL2.QuestRecovery
             return QuestRecoveryTargetState.TargetLabel ?? $"QuestIndex={QuestRecoveryTargetState.QuestIndex}";
         }
 
-        private string GetGoalDebugText()
+        private static string GetGoalDebugText()
         {
             return QuestRecoveryTargetState.GoalDebugText ?? "";
         }
 
-        private void SkipCurrentQuestStep()
+        private static void SkipCurrentQuestStep()
         {
             if (!QuestRecoveryTargetState.HasTarget)
             {
@@ -89,41 +98,38 @@ namespace EL2.QuestRecovery
 
             int questIndex = QuestRecoveryTargetState.QuestIndex;
 
-            // Minimal log: only the NextQuest name.
+            // Minimal line #1 (on click): “Complete -> NextQuest …”
             TryLogNextQuestName(questIndex);
-
-            // Keep or remove depending on how quiet you want the mod to be.
-            Log.LogWarning(
-                $"[QuestRecovery] User confirmed: CompleteQuestStep questIndex={questIndex} status={QuestRecoveryTargetState.Status} pendingChoices={QuestRecoveryTargetState.PendingChoicesInfo}");
 
             bool ok = InternalAccess.CompleteQuestStepAndFinalize(questIndex);
             if (!ok)
                 Log.LogWarning("[QuestRecovery] CompleteQuestStepAndFinalize failed.");
         }
 
-        private void TryLogNextQuestName(int questIndex)
+        private static void TryLogNextQuestName(int questIndex)
         {
             try
             {
                 object questController = InternalAccess.GetQuestController();
-                if (questController == null)
-                    return;
+                if (questController == null) return;
 
                 IList quests = PatchHelper.ReadAsIList(questController, "Quests");
-                if (quests == null)
-                    return;
+                if (quests == null) return;
 
                 object questObj = PatchHelper.FindQuestByIndex(quests, questIndex);
-                if (questObj == null)
-                    return;
+                if (questObj == null) return;
 
                 int stepIndex = PatchHelper.ReadInt(questObj, "StepIndex", -1);
+                if (stepIndex < 0) return;
 
                 object choiceDef = PatchHelper.ReadObj(questObj, "QuestChoiceDefinition");
                 object stepsObj = PatchHelper.ReadObj(choiceDef, "QuestSteps");
 
-                if (!(stepsObj is IList steps) || stepIndex < 0 || stepIndex >= steps.Count)
+                IList steps = stepsObj as IList;
+                if (steps == null)
                     return;
+
+                if (stepIndex >= steps.Count) return;
 
                 object stepObj = steps[stepIndex];
                 object nextQuestObj = PatchHelper.ReadObj(stepObj, "NextQuest");
@@ -134,8 +140,7 @@ namespace EL2.QuestRecovery
                 if (string.IsNullOrWhiteSpace(nextQuestName))
                     nextQuestName = "(none)";
 
-                Log.LogWarning(
-                    $"[QuestRecovery] NextQuest after questIndex={questIndex} stepIndex={stepIndex} => '{nextQuestName}'");
+                Log.LogWarning($"[QuestRecovery] Complete -> NextQuest '{nextQuestName}' (questIndex={questIndex}, stepIndex={stepIndex})");
             }
             catch (Exception ex)
             {
