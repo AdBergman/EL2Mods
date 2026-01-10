@@ -14,7 +14,7 @@ namespace EL2.QuestRecovery.UI
             public bool NewDetailsEnabled;
 
             public bool CopyClicked;
-            public bool SkipClicked;
+            public bool CompleteClicked;
 
             public Vector2 NewDetailsScroll;
         }
@@ -216,7 +216,7 @@ namespace EL2.QuestRecovery.UI
             bool detailsEnabled,
             Vector2 detailsScroll,
             bool spAllowed,
-            bool canSkip,
+            bool canComplete,
             bool locked,
             string currentSig,
             string rawTargetLabel,
@@ -226,7 +226,7 @@ namespace EL2.QuestRecovery.UI
         {
             EnsureStyles();
 
-            RenderResult rr = default;
+            RenderResult rr = default(RenderResult);
             rr.NewDetailsEnabled = detailsEnabled;
             rr.NewDetailsScroll = detailsScroll;
 
@@ -268,7 +268,7 @@ namespace EL2.QuestRecovery.UI
             string statusText =
                 !spAllowed ? "SP-only" :
                 locked ? "Locked" :
-                !canSkip ? "Not ready" :
+                !canComplete ? "Not ready" :
                 "Ready";
 
             GUILayout.Label(statusText, _headerStatusStyle, GUILayout.Height(HeaderRowHeight));
@@ -310,16 +310,16 @@ namespace EL2.QuestRecovery.UI
 
             GUILayout.Space(8);
 
-            bool enabled = canSkip && !locked;
+            bool enabled = canComplete && !locked;
             GUI.enabled = enabled;
 
             string buttonText =
                 locked ? "Progress quest (trigger action)" :
-                !canSkip ? "Skip Quest (not ready)" :
-                "Skip Quest";
+                !canComplete ? "Complete Quest (not ready)" :
+                "Complete Quest";
 
             if (GUILayout.Button(buttonText, enabled ? _dangerButtonStyle : _buttonStyle, GUILayout.ExpandWidth(true)))
-                rr.SkipClicked = true;
+                rr.CompleteClicked = true;
 
             GUI.enabled = true;
 
@@ -378,7 +378,7 @@ namespace EL2.QuestRecovery.UI
             string[] lines = raw.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
             List<string> kept = new List<string>();
 
-            foreach (var line in lines)
+            foreach (string line in lines)
             {
                 string t = line.Trim();
                 if (t.Length == 0) continue;
@@ -392,7 +392,7 @@ namespace EL2.QuestRecovery.UI
 
         private static Texture2D MakeSolidTex(Color c)
         {
-            var tex = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+            Texture2D tex = new Texture2D(1, 1, TextureFormat.RGBA32, false);
             tex.SetPixel(0, 0, c);
             tex.Apply();
             return tex;

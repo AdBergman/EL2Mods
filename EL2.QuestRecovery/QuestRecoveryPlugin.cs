@@ -40,10 +40,10 @@ namespace EL2.QuestRecovery
             _overlay = gameObject.AddComponent<QuestRecoveryOverlay>();
             _overlay.InitLogger(Logger);
 
-            _overlay.CanSkip = CanSkipNow;
+            _overlay.CanComplete = CanCompleteNow;
             _overlay.GetTargetLabel = GetTargetLabel;
             _overlay.GetGoalDebugText = GetGoalDebugText;
-            _overlay.SkipAction = SkipCurrentQuestStep;
+            _overlay.CompleteAction = CompleteCurrentQuestStep;
 
             if (LogStartupLines)
                 Log.LogInfo("QuestRecoveryOverlay initialized.");
@@ -60,7 +60,7 @@ namespace EL2.QuestRecovery
             }
         }
 
-        private static bool CanSkipNow()
+        private static bool CanCompleteNow()
         {
             if (!UiState.IsQuestWindowOpen) return false;
             if (!QuestRecoveryTargetState.HasTarget) return false;
@@ -68,7 +68,7 @@ namespace EL2.QuestRecovery
             if (!string.Equals(QuestRecoveryTargetState.Status, "InProgress", StringComparison.OrdinalIgnoreCase))
                 return false;
 
-            // Don’t allow skipping when there are choices (branching / selection pending).
+            // Don’t allow completing when there are choices (branching / selection pending).
             if (!QuestRecoveryTargetState.IsPendingChoicesEmpty())
                 return false;
 
@@ -88,11 +88,11 @@ namespace EL2.QuestRecovery
             return QuestRecoveryTargetState.GoalDebugText ?? "";
         }
 
-        private static void SkipCurrentQuestStep()
+        private static void CompleteCurrentQuestStep()
         {
             if (!QuestRecoveryTargetState.HasTarget)
             {
-                Log.LogWarning("[QuestRecovery] Skip requested but no target is available.");
+                Log.LogWarning("[QuestRecovery] Complete requested but no target is available.");
                 return;
             }
 
@@ -126,8 +126,7 @@ namespace EL2.QuestRecovery
                 object stepsObj = PatchHelper.ReadObj(choiceDef, "QuestSteps");
 
                 IList steps = stepsObj as IList;
-                if (steps == null)
-                    return;
+                if (steps == null) return;
 
                 if (stepIndex >= steps.Count) return;
 
@@ -140,7 +139,8 @@ namespace EL2.QuestRecovery
                 if (string.IsNullOrWhiteSpace(nextQuestName))
                     nextQuestName = "(none)";
 
-                Log.LogWarning($"[QuestRecovery] Complete -> NextQuest '{nextQuestName}' (questIndex={questIndex}, stepIndex={stepIndex})");
+                Log.LogWarning(
+                    $"[QuestRecovery] Complete -> NextQuest '{nextQuestName}' (questIndex={questIndex}, stepIndex={stepIndex})");
             }
             catch (Exception ex)
             {

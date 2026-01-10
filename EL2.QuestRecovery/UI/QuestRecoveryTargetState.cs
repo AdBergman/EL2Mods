@@ -12,7 +12,7 @@ namespace EL2.QuestRecovery.UI
         // Debug text shown in overlay (details panel)
         internal static volatile string GoalDebugText;
 
-        // Used by overlay to detect target changes + lock after clicking Skip
+        // Used by overlay to detect target changes + lock after clicking Complete
         internal static volatile string CurrentSignature;
         internal static volatile string LastAppliedSignature;
 
@@ -65,7 +65,7 @@ namespace EL2.QuestRecovery.UI
 
         /// <summary>
         /// Overlay considers the action "locked" if the current target signature matches the last applied.
-        /// This prevents spamming Skip on the exact same quest step.
+        /// This prevents spamming Complete on the exact same quest step.
         /// </summary>
         internal static bool IsLocked()
         {
@@ -93,7 +93,7 @@ namespace EL2.QuestRecovery.UI
         }
 
         /// <summary>
-        /// Called by overlay after user clicks Skip. Records the current signature so IsLocked() becomes true.
+        /// Called by overlay after user clicks Complete. Records the current signature so IsLocked() becomes true.
         /// </summary>
         internal static void MarkApplied()
         {

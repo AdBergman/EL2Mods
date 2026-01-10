@@ -7,9 +7,9 @@ namespace EL2.QuestRecovery.UI
 {
     public sealed class QuestRecoveryOverlay : MonoBehaviour
     {
-        public Func<bool> CanSkip;
+        public Func<bool> CanComplete;
         public Func<string> GetTargetLabel;
-        public Action SkipAction;
+        public Action CompleteAction;
 
         // Debug text provider (wire from TargetState)
         public Func<string> GetGoalDebugText;
@@ -20,7 +20,7 @@ namespace EL2.QuestRecovery.UI
         private bool _detailsEnabled = false;  // Show Details toggle
 
         // Fallback gating (only used if signature is missing)
-        private bool _skipUsedThisWindowOpen = false;
+        private bool _completeUsedThisWindowOpen = false;
 
         // Track target changes to auto re-arm when the quest advances / refreshes
         private string _lastSeenSignature = null;
@@ -97,12 +97,12 @@ namespace EL2.QuestRecovery.UI
             return FirstLaunchDefaultPos;
         }
 
-        private bool SafeCanSkip()
+        private bool SafeCanComplete()
         {
-            try { return CanSkip != null && CanSkip(); }
+            try { return CanComplete != null && CanComplete(); }
             catch (Exception e)
             {
-                _log?.LogWarning($"[QuestRecoveryOverlay] CanSkip threw: {e.Message}");
+                _log?.LogWarning($"[QuestRecoveryOverlay] CanComplete threw: {e.Message}");
                 return false;
             }
         }
@@ -135,12 +135,12 @@ namespace EL2.QuestRecovery.UI
             }
         }
 
-        private void SafeInvokeSkip()
+        private void SafeInvokeComplete()
         {
-            try { SkipAction?.Invoke(); }
+            try { CompleteAction?.Invoke(); }
             catch (Exception e)
             {
-                _log?.LogError($"[QuestRecoveryOverlay] SkipAction threw: {e}");
+                _log?.LogError($"[QuestRecoveryOverlay] CompleteAction threw: {e}");
             }
         }
 
@@ -168,7 +168,7 @@ namespace EL2.QuestRecovery.UI
         {
             if (!UiState.IsQuestWindowOpen)
             {
-                _skipUsedThisWindowOpen = false;
+                _completeUsedThisWindowOpen = false;
                 _lastSeenSignature = null;
 
                 _transientFeedback = null;
@@ -196,17 +196,17 @@ namespace EL2.QuestRecovery.UI
             if (!string.IsNullOrWhiteSpace(currentSig) && currentSig != _lastSeenSignature)
             {
                 _lastSeenSignature = currentSig;
-                _skipUsedThisWindowOpen = false;
+                _completeUsedThisWindowOpen = false;
                 _detailsScroll = Vector2.zero;
             }
 
             // Gather current UI inputs
             string rawTarget = SafeTargetLabel();
             string detailsText = SafeGoalDebugText();
-            bool rawCanSkip = SafeCanSkip();
+            bool rawCanComplete = SafeCanComplete();
 
             bool signatureLockActive = QuestRecoveryTargetState.IsLocked();
-            bool fallbackLockActive = _skipUsedThisWindowOpen && string.IsNullOrWhiteSpace(currentSig);
+            bool fallbackLockActive = _completeUsedThisWindowOpen && string.IsNullOrWhiteSpace(currentSig);
             bool locked = signatureLockActive || fallbackLockActive;
 
             float panelHeight = _renderer.ComputePanelHeight(_panelExpanded, _detailsEnabled, detailsText);
@@ -226,7 +226,7 @@ namespace EL2.QuestRecovery.UI
                 detailsEnabled: _detailsEnabled,
                 detailsScroll: _detailsScroll,
                 spAllowed: spAllowed,
-                canSkip: rawCanSkip,
+                canComplete: rawCanComplete,
                 locked: locked,
                 currentSig: currentSig,
                 rawTargetLabel: rawTarget,
@@ -254,13 +254,13 @@ namespace EL2.QuestRecovery.UI
                 CopyToClipboard(detailsText ?? "");
             }
 
-            if (rr.SkipClicked)
+            if (rr.CompleteClicked)
             {
-                _skipUsedThisWindowOpen = true;
+                _completeUsedThisWindowOpen = true;
                 QuestRecoveryTargetState.MarkApplied();
 
-                _log?.LogWarning("[QuestRecoveryOverlay] User clicked Skip Quest.");
-                SafeInvokeSkip();
+                _log?.LogWarning("[QuestRecoveryOverlay] User clicked Complete Quest.");
+                SafeInvokeComplete();
             }
 
             _detailsScroll = rr.NewDetailsScroll;
