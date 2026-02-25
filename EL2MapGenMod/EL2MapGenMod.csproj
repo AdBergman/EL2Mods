@@ -72,6 +72,7 @@
         <Compile Include="Patches\SetMercuryData_Execute.cs" />
         <Compile Include="Properties\AssemblyInfo.cs"/>
         <Compile Include="Tuning\ClampUtil.cs" />
+        <Compile Include="Tuning\RecessSeaLevelTuner.cs" />
         <Compile Include="Tuning\WorldGenTuner.cs" />
         <Compile Include="Tuning\WorldGenTuningProfile.cs" />
         <Compile Include="Util\WorldGenReflection.cs" />

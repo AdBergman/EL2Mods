@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using HarmonyLib;
+﻿using HarmonyLib;
 using Amplitude.Mercury.WorldGenerator.Generator.Tasks.Generator;
 using Amplitude.Mercury.WorldGenerator.Generator.World;
 using EL2MapGenMod.Tuning;
@@ -16,24 +14,7 @@ namespace EL2MapGenMod.Patches
             if (ctx == null)
                 return;
 
-            List<int> seaLevels = ctx.RecessSeaLevels;
-            if (seaLevels == null || seaLevels.Count == 0)
-                return;
-
-            // No compensation! We WANT sea to be StartLandElevation - 1.
-            // Only enforce persistent water after 3rd recession step + monotonic safety.
-            for (int i = 1; i < seaLevels.Count; i++)
-            {
-                if (i >= WorldGenTuningProfile.PersistentWaterClampFromRecessIndex)
-                {
-                    if (seaLevels[i] < WorldGenTuningProfile.PersistentWaterMinSeaLevel)
-                        seaLevels[i] = WorldGenTuningProfile.PersistentWaterMinSeaLevel;
-                }
-
-                // Ensure monotonic non-increasing
-                if (seaLevels[i] > seaLevels[i - 1])
-                    seaLevels[i] = seaLevels[i - 1];
-            }
+            RecessSeaLevelTuner.Apply(ctx);
         }
     }
 }

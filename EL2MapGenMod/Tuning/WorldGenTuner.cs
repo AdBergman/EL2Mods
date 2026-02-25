@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using Amplitude.Mercury.WorldGenerator;
 
 namespace EL2MapGenMod.Tuning
@@ -19,14 +19,21 @@ namespace EL2MapGenMod.Tuning
         {
             // Scale is used in CompleteContextSetup:
             // rows = WorldHeight * HeightScale / 100, cols = WorldWidth * WidthScale / 100
-            o.WidthScale = ClampUtil.ClampByte((int)Math.Round(o.WidthScale * (WorldGenTuningProfile.MapScalePercent / 100.0)));
-            o.HeightScale = ClampUtil.ClampByte((int)Math.Round(o.HeightScale * (WorldGenTuningProfile.MapScalePercent / 100.0)));
+            double scaleFactor = WorldGenTuningProfile.MapScalePercent / 100.0;
+
+            int newWidthScale = (int)Math.Round(o.WidthScale * scaleFactor);
+            int newHeightScale = (int)Math.Round(o.HeightScale * scaleFactor);
+
+            o.WidthScale = ClampUtil.ClampByte(newWidthScale);
+            o.HeightScale = ClampUtil.ClampByte(newHeightScale);
         }
 
         private static void ApplyElevationsAndRidges(WorldGeneratorOptions o)
         {
-            // Raise starting land elevation (affects generation heavily)
-            o.StartLandElevation = ClampUtil.ClampSByte(o.StartLandElevation + WorldGenTuningProfile.LandElevationRaise);
+            // Hard invariant: land must start at least at elevation 6 (so initial sea becomes 5 by vanilla rule).
+            // We clamp upward only (never force presets down).
+            if (o.StartLandElevation < WorldGenTuningProfile.StartLandElevationTarget)
+                o.StartLandElevation = WorldGenTuningProfile.StartLandElevationTarget;
 
             // Give headroom for taller peaks
             o.MaxLandElevation = ClampUtil.ClampSByte(o.MaxLandElevation + WorldGenTuningProfile.MaxLandElevationRaise);
@@ -60,6 +67,7 @@ namespace EL2MapGenMod.Tuning
                 o.RiverPresencePercent = (byte)WorldGenTuningProfile.RiverPresenceFloor;
 
             // More candidate sources and allow slightly tighter spacing
+            // (Important later if we experiment with branching: more sources + shorter min-distance -> more intersections/opportunities)
             o.RiverSeedCount = ClampUtil.ClampByte(o.RiverSeedCount + WorldGenTuningProfile.RiverSeedCountBonus);
             o.RiverSourcesMinDistance = ClampUtil.ClampByte(o.RiverSourcesMinDistance + WorldGenTuningProfile.RiverSourcesMinDistanceDelta);
 

@@ -2,13 +2,15 @@
 {
     internal static class WorldGenTuningProfile
     {
-        // ~50% bigger area: 1.25 * 1.25 = 1.5625 (close enough, and stays simple/robust)
-        public const int MapScalePercent = 125;
-
-        // Raise land elevation by this amount via WorldGeneratorOptions.StartLandElevation.
-        // Sea will automatically start at (StartLandElevation - 1), so land+1 also raises sea+1.
-        // This makes the world start one level higher while still leaving water after recessions.
-        public const int LandElevationRaise = 1;
+        // Map size scaling:
+        // If WidthScale and HeightScale both use this percent, then AREA scales by (p/100)^2.
+        // Example:
+        // - 112% => 1.12 * 1.12 = 1.2544 (~ +25% area)
+        // - 125% => 1.25 * 1.25 = 1.5625 (~ +56% area)
+        public const int MapScalePercent = 112;
+        
+        // StartLandElevation MUST be 6, and the game will then start sea at (StartLandElevation - 1) => 5.
+        public const sbyte StartLandElevationTarget = 6;
 
         // Ridges / verticality
         public const int MaxLandElevationRaise = 4;
@@ -26,8 +28,9 @@
         public const int RiverMaxLengthBonus = 3;
         public const int RiverSourcesMinDistanceDelta = -1;
 
-        // Persistent water rule (after 3rd recession step)
-        public const int PersistentWaterMinSeaLevel = 1;
+        // Persistent water rule:
+        // After the 3rd recession step, we clamp the sea to keep water on the map.
         public const int PersistentWaterClampFromRecessIndex = 3;
+        public const int PersistentWaterMinSeaLevel = 2;
     }
 }
