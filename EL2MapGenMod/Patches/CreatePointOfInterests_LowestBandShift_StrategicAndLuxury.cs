@@ -1,7 +1,4 @@
-﻿// action: UPDATE
-// namespace: EL2MapGenMod.Patches
-// class: CreatePointOfInterests_LowestBandShift_StrategicAndLuxury
-
+﻿
 using System.Reflection;
 using HarmonyLib;
 using Amplitude.Mercury.WorldGenerator.Generator;

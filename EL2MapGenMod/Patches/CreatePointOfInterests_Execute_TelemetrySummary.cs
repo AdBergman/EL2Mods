@@ -1,7 +1,4 @@
-﻿// action: CREATE
-// namespace: EL2MapGenMod.Patches
-// class: CreatePointOfInterests_Execute_TelemetrySummary
-
+﻿
 using HarmonyLib;
 using Amplitude.Mercury.WorldGenerator.Generator.Tasks.Generator;
 using EL2MapGenMod.Util;

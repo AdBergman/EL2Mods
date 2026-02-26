@@ -1,6 +1,4 @@
-﻿// namespace: EL2MapGenMod.Patches
-// class: WorldGeneratorContext_GetRecessIndexFromElevation
-namespace EL2MapGenMod.Patches
+﻿namespace EL2MapGenMod.Patches
 {
     // Disabled for Option A.
     // Returning -1 from GetRecessIndexFromElevation can be valid in some places,

@@ -1,5 +1,3 @@
-// namespace: EL2MapGenMod.Patches
-// class: CreateElevations_UpdateContext_LayerDistribution
 using System.Reflection;
 using HarmonyLib;
 using Amplitude.Mercury.WorldGenerator.Generator.Tasks.Generator;

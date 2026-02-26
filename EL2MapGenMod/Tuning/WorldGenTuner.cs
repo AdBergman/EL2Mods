@@ -1,6 +1,4 @@
-﻿// namespace: EL2MapGenMod.Tuning
-// class: WorldGenTuner
-using System;
+﻿using System;
 using Amplitude.Mercury.WorldGenerator;
 
 namespace EL2MapGenMod.Tuning
