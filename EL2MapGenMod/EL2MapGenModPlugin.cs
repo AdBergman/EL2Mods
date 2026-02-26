@@ -3,20 +3,14 @@ using HarmonyLib;
 
 namespace EL2MapGenMod
 {
-    [BepInPlugin(ModInfo.Guid, ModInfo.Name, ModInfo.Version)]
+    [BepInPlugin("com.bergman.el2.persistentwater", "EL2 Persistent Water Mod", "1.1.0")]
     public sealed class EL2MapGenModPlugin : BaseUnityPlugin
     {
         private void Awake()
         {
-            var harmony = new Harmony(ModInfo.Guid);
+            var harmony = new Harmony("com.bergman.el2.persistentwater");
             harmony.PatchAll();
+            Logger.LogInfo("Persistent Water Mod Loaded: Forcing ~30% bottom-layer water coverage.");
         }
-    }
-
-    internal static class ModInfo
-    {
-        public const string Guid = "com.yourname.el2.mapgen.bigger.vertical.rivers";
-        public const string Name = "EL2 MapGen: Bigger + More Vertical + More Rivers + Persistent Seas";
-        public const string Version = "1.0.0";
     }
 }

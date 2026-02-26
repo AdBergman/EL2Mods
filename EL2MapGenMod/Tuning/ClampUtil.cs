@@ -1,4 +1,6 @@
-﻿using System;
+﻿// namespace: EL2MapGenMod.Tuning
+// class: ClampUtil
+using System;
 
 namespace EL2MapGenMod.Tuning
 {

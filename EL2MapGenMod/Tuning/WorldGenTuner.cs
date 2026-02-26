@@ -1,4 +1,6 @@
-﻿﻿using System;
+﻿// namespace: EL2MapGenMod.Tuning
+// class: WorldGenTuner
+using System;
 using Amplitude.Mercury.WorldGenerator;
 
 namespace EL2MapGenMod.Tuning
@@ -13,6 +15,7 @@ namespace EL2MapGenMod.Tuning
             ApplyMapSize(o);
             ApplyElevationsAndRidges(o);
             ApplyRivers(o);
+            ApplyLakes(o);
         }
 
         private static void ApplyMapSize(WorldGeneratorOptions o)
@@ -30,7 +33,7 @@ namespace EL2MapGenMod.Tuning
 
         private static void ApplyElevationsAndRidges(WorldGeneratorOptions o)
         {
-            // Hard invariant: land must start at least at elevation 6 (so initial sea becomes 5 by vanilla rule).
+            // Hard invariant: land must start at least at elevation target.
             // We clamp upward only (never force presets down).
             if (o.StartLandElevation < WorldGenTuningProfile.StartLandElevationTarget)
                 o.StartLandElevation = WorldGenTuningProfile.StartLandElevationTarget;
@@ -50,7 +53,6 @@ namespace EL2MapGenMod.Tuning
             o.PassablePrevalence = ClampUtil.ClampByte(o.PassablePrevalence + 5);
 
             // Ridges: more frequent and slightly easier to qualify for ridge candidacy
-            // Avoid Math.Max here due to ambiguous overload / numeric conversion issues on older compilers.
             if (o.RidgePresencePercent < (byte)WorldGenTuningProfile.RidgePresenceFloor)
                 o.RidgePresencePercent = (byte)WorldGenTuningProfile.RidgePresenceFloor;
 
@@ -62,12 +64,10 @@ namespace EL2MapGenMod.Tuning
 
         private static void ApplyRivers(WorldGeneratorOptions o)
         {
-            // Avoid Math.Max here due to ambiguous overload / numeric conversion issues on older compilers.
             if (o.RiverPresencePercent < (byte)WorldGenTuningProfile.RiverPresenceFloor)
                 o.RiverPresencePercent = (byte)WorldGenTuningProfile.RiverPresenceFloor;
 
             // More candidate sources and allow slightly tighter spacing
-            // (Important later if we experiment with branching: more sources + shorter min-distance -> more intersections/opportunities)
             o.RiverSeedCount = ClampUtil.ClampByte(o.RiverSeedCount + WorldGenTuningProfile.RiverSeedCountBonus);
             o.RiverSourcesMinDistance = ClampUtil.ClampByte(o.RiverSourcesMinDistance + WorldGenTuningProfile.RiverSourcesMinDistanceDelta);
 
@@ -84,6 +84,47 @@ namespace EL2MapGenMod.Tuning
 
             if (o.RiverMinLength > o.RiverMaxLength)
                 o.RiverMinLength = o.RiverMaxLength;
+        }
+
+        private static void ApplyLakes(WorldGeneratorOptions o)
+        {
+            // -------------------------------------------------------------
+            // 1) Increase probability that a valid lake cluster becomes a lake
+            // -------------------------------------------------------------
+            int boosted = o.LakePresencePercent + WorldGenTuningProfile.LakePresencePercentBonus;
+            boosted = ClampUtil.ClampInt(boosted, 0, 60);
+            o.LakePresencePercent = (byte)boosted;
+
+            // -------------------------------------------------------------
+            // 2) Relax lake area constraints so more clusters survive filtering
+            // -------------------------------------------------------------
+            int minLakeArea = o.MinLakeArea + WorldGenTuningProfile.MinLakeAreaDelta;
+            int maxLakeArea = o.MaxLakeArea + WorldGenTuningProfile.MaxLakeAreaDelta;
+
+            // Floors
+            if (minLakeArea < WorldGenTuningProfile.MinLakeAreaFloor)
+                minLakeArea = WorldGenTuningProfile.MinLakeAreaFloor;
+
+            int maxFloor = WorldGenTuningProfile.MaxLakeAreaFloor;
+            if (maxFloor < minLakeArea)
+                maxFloor = minLakeArea;
+
+            if (maxLakeArea < maxFloor)
+                maxLakeArea = maxFloor;
+
+            o.MinLakeArea = ClampUtil.ClampSByte(minLakeArea);
+            o.MaxLakeArea = ClampUtil.ClampSByte(maxLakeArea);
+
+            // -------------------------------------------------------------
+            // 3) Optional: loosen cliff constraint slightly to allow more basin seeds
+            // -------------------------------------------------------------
+            if (WorldGenTuningProfile.MaxCliffDeltaElevationDelta != 0)
+            {
+                int newMaxCliffDelta = o.MaxCliffDeltaElevation + WorldGenTuningProfile.MaxCliffDeltaElevationDelta;
+                // keep sane (avoid huge cliffs). 1..10 is a safe generic range.
+                newMaxCliffDelta = ClampUtil.ClampInt(newMaxCliffDelta, 1, 10);
+                o.MaxCliffDeltaElevation = ClampUtil.ClampSByte(newMaxCliffDelta);
+            }
         }
     }
 }
