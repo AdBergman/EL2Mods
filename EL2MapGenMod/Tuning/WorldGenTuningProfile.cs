@@ -89,7 +89,6 @@ namespace EL2MapGenMod.Tuning
         public const bool ClampInlandSeaBottomToZeroOrLower = true;
 
         // How deep lakes are dug relative to their surrounding ring.
-        // NOTE: old profile used 5; keep as-is unless you intentionally retuned.
         public const int LakeDigDepth = 5;
 
         // Allow low elevation lake seeds (needed for bottom-band expansion).
@@ -134,5 +133,36 @@ namespace EL2MapGenMod.Tuning
         // Recess floor: sea will not fall below this elevation.
         // With sea starting at 4, floor=1 allows 4->3->2->1 across 3 recess drops.
         public const int PersistentSeaLevelFloor = 1;
+
+        // ---------------------------------------------------------------------
+        // Strategic/Luxury placement policy
+        // ---------------------------------------------------------------------
+
+        // We do NOT want brittle hard elevation windows right now.
+        // We want placement to follow the (rebuilt) RecessSeaLevels so timing matches recession,
+        // while clamping to "available tiers" and only shifting away from the bottom lake band.
+        public const bool UseHardStrategicLuxuryElevationWindows = false;
+
+        // Clamp strategics/luxuries to only spawn in "available tiers".
+        // This prevents high tiers from being placed into bands that never surface (or surface too late).
+        public const bool ClampStrategicLuxuryToAvailableTiers = true;
+
+        // Minimum tier index for strategics/luxuries:
+        // Set to 1 to ensure no strategic resources are visible before the FIRST recession.
+        public const int StrategicLuxuryMinRecessIndex = 1;
+
+        // Maximum tier index for strategics/luxuries:
+        // With 3 recessions, this is typically 3 (tiers 1..3 allowed).
+        public const int StrategicLuxuryMaxRecessIndex = 3;
+
+        // ---------------------------------------------------------------------
+        // (Legacy / parked) Hard elevation window knobs
+        // Kept so older code/branches compile if referenced, but disabled above.
+        // ---------------------------------------------------------------------
+
+        public static readonly int[] StrategicLuxuryLowerExclusive = { 11, 8, 4, 2, 0 };
+        public static readonly int[] StrategicLuxuryUpperInclusive = { 15, 11, 8, 4, 2 };
+        public const int StrategicLuxuryFallbackLowerExclusive = 4;
+        public const int StrategicLuxuryFallbackUpperInclusive = 15;
     }
 }

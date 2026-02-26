@@ -2,13 +2,13 @@
 // namespace: EL2MapGenMod.Patches
 // class: CreatePointOfInterests_LowestBandShift_StrategicAndLuxury
 
-using System;
 using System.Reflection;
-using Amplitude.Mercury.WorldGenerator.Generator;
 using HarmonyLib;
+using Amplitude.Mercury.WorldGenerator.Generator;
 using Amplitude.Mercury.WorldGenerator.Generator.Tasks.Generator;
 using Amplitude.Mercury.WorldGenerator.Generator.World;
 using Amplitude.Mercury.WorldGenerator.Generator.World.Info;
+using EL2MapGenMod.Tuning;
 using EL2MapGenMod.Util;
 
 namespace EL2MapGenMod.Patches
@@ -18,7 +18,6 @@ namespace EL2MapGenMod.Patches
     {
         private static MethodBase TargetMethod()
         {
-            // private bool HasPossiblePoi(int recessIndex, Poi poi, District district, bool noWater = false)
             return AccessTools.Method(
                 typeof(CreatePointOfInterests),
                 "HasPossiblePoi",
@@ -36,17 +35,15 @@ namespace EL2MapGenMod.Patches
         {
             var ctx = __instance?.Context;
 
-            // Telemetry state (safe even if ctx is null)
             var runState = (ctx != null && WorldgenTelemetry.Enabled) ? WorldgenTelemetry.GetOrCreate(ctx) : null;
             if (runState != null) runState.Poi.TotalChecks++;
 
             if (__instance == null || poi == null || district == null || ctx == null)
             {
                 if (runState != null) runState.Poi.Reject_NullOrInvalid++;
-                return true; // fall back to vanilla if we can't reason safely
+                return true;
             }
 
-            // Only touch strategic/luxury, leave everything else vanilla
             var type = poi.Setting.Type;
             bool isStrategicOrLuxury =
                 type == WorldGeneratorSettings.PoiType.Strategic ||
@@ -62,20 +59,43 @@ namespace EL2MapGenMod.Patches
 
             var seaLevels = ctx.RecessSeaLevels;
             if (seaLevels == null || seaLevels.Count == 0)
-                return true; // fail-safe, let vanilla decide
+                return true;
 
-            // Shift ALL strategic/luxury tiers up by one recess band.
-            int effectiveRecessIndex = recessIndex + 1;
-            if (effectiveRecessIndex >= seaLevels.Count)
-                effectiveRecessIndex = seaLevels.Count - 1;
-            if (effectiveRecessIndex < 0)
-                effectiveRecessIndex = 0;
+            // Clamp incoming recessIndex to valid list range first
+            int clamped = recessIndex;
+            if (clamped < 0) clamped = 0;
+            if (clamped >= seaLevels.Count) clamped = seaLevels.Count - 1;
 
-            if (runState != null) runState.Poi.StrategicLuxuryShifted++;
+            // Then clamp to "available tiers" (your requirement)
+            if (WorldGenTuningProfile.ClampStrategicLuxuryToAvailableTiers)
+            {
+                int min = WorldGenTuningProfile.StrategicLuxuryMinRecessIndex;
+                int max = WorldGenTuningProfile.StrategicLuxuryMaxRecessIndex;
 
-            // Content gating:
-            // - When noWater==true: treat Ridge as land-like (critical for Tier 3 in ridge-heavy tops)
-            // - Otherwise: allow vanilla's broad set + Ridge
+                // Keep within [0..seaLevels.Count-1] as well
+                if (min < 0) min = 0;
+                if (max >= seaLevels.Count) max = seaLevels.Count - 1;
+                if (max < min) max = min;
+
+                if (clamped < min) clamped = min;
+                if (clamped > max) clamped = max;
+            }
+
+            // Bottom band fix ONLY if this band is the "lake band" (<=0 or last band)
+            int lowerForBand = seaLevels[clamped];
+            bool isBottomBand = (clamped == seaLevels.Count - 1) || (lowerForBand <= 0);
+
+            int effectiveRecessIndex = clamped;
+            if (isBottomBand)
+            {
+                effectiveRecessIndex = clamped + 1;
+                if (effectiveRecessIndex >= seaLevels.Count)
+                    effectiveRecessIndex = seaLevels.Count - 1;
+
+                if (runState != null) runState.Poi.StrategicLuxuryShifted++;
+            }
+
+            // Content gating (allow ridge as land-like)
             if (noWater)
             {
                 if (district.Content != District.Contents.Land &&
@@ -99,7 +119,7 @@ namespace EL2MapGenMod.Patches
                 }
             }
 
-            // Elevation gate (same structure as vanilla, but using effectiveRecessIndex)
+            // Elevation gate using effective index
             int upper = effectiveRecessIndex >= 1
                 ? seaLevels[effectiveRecessIndex - 1]
                 : (int)ctx.Input.Options.StartLandMaxElevation;
@@ -161,7 +181,7 @@ namespace EL2MapGenMod.Patches
             if (runState != null) runState.Poi.AllowedChecks++;
 
             __result = true;
-            return false; // skip vanilla
+            return false;
         }
     }
 }

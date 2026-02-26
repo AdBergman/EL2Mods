@@ -1,4 +1,4 @@
-﻿// action: CREATE
+﻿// action: UPDATE
 // namespace: EL2MapGenMod.Tuning
 // class: RecessSeaLevelsRebuilder
 
@@ -13,94 +13,79 @@ namespace EL2MapGenMod.Tuning
     {
         /// <summary>
         /// Rebuild ctx.RecessSeaLevels based on the FINAL elevation distribution.
-        /// Keeps the same band count (ctx.RecessSeaLevels.Count) when possible.
+        /// Uses UNIQUE elevation levels to avoid quantile thresholds landing on spikes/gaps,
+        /// producing tiny or degenerate (duplicate) bands.
         /// </summary>
         public static List<int> Rebuild(WorldGeneratorContext ctx)
         {
             if (ctx == null) return null;
 
-            // Determine desired band count from existing list to preserve vanilla semantics/order.
             int bandCount = ctx.RecessSeaLevels != null ? ctx.RecessSeaLevels.Count : 0;
             if (bandCount <= 0)
-                bandCount = 3; // fallback (your stated "recedes 3 times")
+                bandCount = 3; // fallback
 
             var districts = ctx.AllDistrict;
             if (districts == null || districts.Length == 0)
                 return null;
 
-            // Gather elevations (we use all districts; lakes/ridges still occupy space and matter for reveal bands).
-            var elevs = new int[districts.Length];
-            int n = 0;
+            // Collect unique elevation levels actually present.
+            var unique = new SortedSet<int>();
             for (int i = 0; i < districts.Length; i++)
             {
                 var d = districts[i];
                 if (d == null) continue;
-                elevs[n++] = d.Elevation;
+                unique.Add(d.Elevation);
             }
 
-            if (n == 0)
+            if (unique.Count == 0)
                 return null;
 
-            Array.Resize(ref elevs, n);
-            Array.Sort(elevs); // ascending
+            var levels = unique.ToList(); // ascending
+            int maxElev = levels[levels.Count - 1];
 
-            int minElev = elevs[0];
-            int maxElev = elevs[n - 1];
-
-            // Quantile-based thresholds:
-            // For bandCount = N, we produce N thresholds t0..t(N-1) descending.
-            // Band 0 is (t0, max], Band 1 is (t1, t0], ..., Band N-1 is (tN-1, tN-2]
-            //
-            // We choose tk from quantile q = 1 - (k+1)/N.
-            // Example N=3: q=0.666, 0.333, 0.0
             var thresholds = new List<int>(bandCount);
 
-            for (int k = 0; k < bandCount; k++)
+            // Map bands evenly across the unique levels from top -> bottom.
+            // This makes each band correspond to at least one "real" elevation present in the map.
+            if (bandCount == 1)
             {
-                double q = 1.0 - (k + 1) / (double)bandCount;
-                int idx = (int)Math.Floor(q * (n - 1));
-                if (idx < 0) idx = 0;
-                if (idx > n - 1) idx = n - 1;
+                thresholds.Add(levels[levels.Count - 1]);
+            }
+            else
+            {
+                for (int k = 0; k < bandCount; k++)
+                {
+                    int topDown = (bandCount - 1) - k;
+                    int idx = (int)Math.Floor(topDown * (levels.Count - 1) / (double)(bandCount - 1));
+                    if (idx < 0) idx = 0;
+                    if (idx > levels.Count - 1) idx = levels.Count - 1;
 
-                int t = elevs[idx];
-
-                thresholds.Add(t);
+                    thresholds.Add(levels[idx]);
+                }
             }
 
-            // Ensure descending + strictly decreasing to form valid (lower, upper] windows.
-            // Also clamp the lowest threshold to PersistentSeaLevelFloor (recession safety).
-            int floor = WorldGenTuningProfile.PersistentSeaLevelFloor;
-
-            for (int i = 0; i < thresholds.Count; i++)
-            {
-                // Clamp overall to observed min/max for sanity
-                if (thresholds[i] < minElev) thresholds[i] = minElev;
-                if (thresholds[i] > maxElev) thresholds[i] = maxElev;
-            }
-
-            // Enforce descending order.
+            // Enforce descending + strict decreasing (required by the HasPossiblePoi windowing logic).
             thresholds.Sort((a, b) => b.CompareTo(a)); // descending
-
-            // Make strictly decreasing.
             for (int i = 1; i < thresholds.Count; i++)
             {
                 if (thresholds[i] >= thresholds[i - 1])
                     thresholds[i] = thresholds[i - 1] - 1;
             }
 
-            // Apply floor to the LAST (lowest) sea level.
+            // Clamp lowest band to recession floor.
+            int floor = WorldGenTuningProfile.PersistentSeaLevelFloor;
             int last = thresholds.Count - 1;
             if (last >= 0 && thresholds[last] < floor)
                 thresholds[last] = floor;
 
-            // Re-assert strict decreasing after floor clamp (in case floor pushes it up)
+            // Re-enforce strictness after floor clamp.
             for (int i = last; i > 0; i--)
             {
                 if (thresholds[i] >= thresholds[i - 1])
                     thresholds[i - 1] = thresholds[i] + 1;
             }
 
-            // Final sanity: keep within [floor..maxElev], and strictly decreasing.
+            // Final clamp + strictness
             for (int i = 0; i < thresholds.Count; i++)
             {
                 if (thresholds[i] < floor) thresholds[i] = floor;
