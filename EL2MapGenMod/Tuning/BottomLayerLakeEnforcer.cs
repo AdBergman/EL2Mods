@@ -29,12 +29,12 @@ namespace EL2MapGenMod.Tuning
                 if (d == null)
                     continue;
 
-                // --- NEW: Bump up deep pits to flatten the ocean floor ---
+                // Flatten Ocean floor
                 if (d.Elevation < maxBottomWaterElevation)
                 {
                     d.Elevation = maxBottomWaterElevation;
                 }
-                // ---------------------------------------------------------
+                
 
                 if (d.Elevation > maxBottomWaterElevation)
                     continue;

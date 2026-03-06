@@ -24,19 +24,17 @@ namespace EL2MapGenMod.Tuning
 
         private static void ApplyElevationsAndRidges(WorldGeneratorOptions o)
         {
-            // By setting this to 10, the engine's internal logic 
-            // will treat 9 and below as the Sea Level.
+            // Tidefall occurs 3 times and reduces sea level by 2. (9 -> 7,5,3)
+            // Starting land elevation is set to 10 to keep  3 -> 1 underwater.
             o.StartLandElevation = WorldGenTuningProfile.StartLandElevationTarget;
-
-            // FIX: Remove the 'WorldSeaLevel' line that caused the error.
             
-            // INCREASE WATER RATIO:
-            // We lower the continent area to 50%. This forces the engine 
+            
+            // Lower the continent area to 50%. This forces the engine 
             // to leave 50% of the map as background 'Ocean' districts.
             o.ContinentUsedAreaPercent = 50; 
             o.ContinentAvoidedAreaPercent = 30;
 
-            // SQUISH LOGIC:
+            // Logic:
             o.MaxPassableDeltaElevation = 1; 
             o.MaxCliffDeltaElevation = 3;
             o.ElevationGrowPercent = 90; 

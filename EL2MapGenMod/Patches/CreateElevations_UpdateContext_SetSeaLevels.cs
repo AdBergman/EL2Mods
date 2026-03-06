@@ -12,10 +12,10 @@ namespace EL2MapGenMod.Patches
             var ctx = __instance?.Context;
             if (ctx == null) return;
 
-            // 1. Force the tidefall thresholds to our exact 2-step intervals
+            // Override
             ctx.RecessSeaLevels = new List<int> { 9, 7, 5, 3 };
 
-            // 2. Force the actual starting water level to match the top band
+            // Override
             ctx.WorldSeaLevel = 9; 
         }
     }

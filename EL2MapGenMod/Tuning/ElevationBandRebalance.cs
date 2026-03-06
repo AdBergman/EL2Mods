@@ -1,7 +1,4 @@
-﻿// namespace: EL2MapGenMod.Tuning
-// class: ElevationBandRebalance
-
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Amplitude.Mercury.WorldGenerator.Algorithm;
 using Amplitude.Mercury.WorldGenerator.Algorithm.Hex;
@@ -46,7 +43,7 @@ namespace EL2MapGenMod.Tuning
                     if (!isLocalMax)
                         continue;
 
-                    // Deep band penalty (avoid shore-cliffs / ridge soup at waterline)
+                    // Deep band penalty (avoid shore-cliffs)
                     if (district.Elevation <= WorldGenTuningProfile.RidgeDeepBandMaxElevation)
                     {
                         if (context.Randomizer.Next(100) < WorldGenTuningProfile.RidgeDeepBandCandidateRejectPercent)
@@ -84,7 +81,7 @@ namespace EL2MapGenMod.Tuning
 
                     if (sumCount > (int)context.Input.Options.MaxRidgeSize * 2)
                     {
-                        // Split oversized ridges (keep some big chains, but not continent-spanning walls)
+                        // Split too long ridges
                         District start = set.ElementAt(context.Randomizer.Next(set.Count));
                         var working = new HashSet<District> { start };
                         var tmp = new List<District>();
@@ -125,9 +122,8 @@ namespace EL2MapGenMod.Tuning
                 }
             }
             while (changed);
-
-            // Place ridges with band-aware presence weighting:
-            // We want "more ridges than just the very top", but avoid shoreline walls.
+            
+            // Adds more ridges in different elevation levels.
             int setCountFinal = connectivityChecker.ConnexNodeSets.Count;
             for (int index = 0; index < setCountFinal; ++index)
             {
@@ -153,7 +149,6 @@ namespace EL2MapGenMod.Tuning
                 bool touchesShoreBand = minElevation <= 4; // Changed from 2 to 4
 
                 // Mid/high elevation ridges: boost to ensure ridges aren't only at the top
-                // (Use your intermediate band range, but only if the cluster isn't hugging shores)
                 if (!touchesShoreBand &&
                     maxElevation >= WorldGenTuningProfile.RidgeIntermediateBandMinElevation &&
                     maxElevation <= WorldGenTuningProfile.RidgeIntermediateBandMaxElevation)

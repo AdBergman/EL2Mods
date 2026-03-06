@@ -10,10 +10,8 @@
         <ProjectGuid>{12FE02F9-1917-4D84-B002-FEFE3F26A95C}</ProjectGuid>
         <OutputType>Library</OutputType>
         <AppDesignerFolder>Properties</AppDesignerFolder>
-
-        <!-- Fix: match your code namespaces -->
+        
         <RootNamespace>EL2MapGenMod</RootNamespace>
-
         <AssemblyName>EL2MapGenMod</AssemblyName>
         <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
         <FileAlignment>512</FileAlignment>
@@ -82,6 +80,7 @@
 
     <ItemGroup>
         <Compile Include="EL2MapGenModPlugin.cs" />
+        <Compile Include="Patches\CreateElevations_ContinentalSkeleton_Erosion.cs" />
         <Compile Include="Patches\CreateElevations_SproutRidges.cs" />
         <Compile Include="Patches\CreateElevations_UpdateContext_ApplyBottomLakes.cs" />
         <Compile Include="Patches\CreateElevations_UpdateContext_SetSeaLevels.cs" />
