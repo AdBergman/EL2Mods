@@ -5,6 +5,7 @@ using HarmonyLib;
 using Amplitude.Mercury.WorldGenerator.Generator.Tasks.Generator;
 using Amplitude.Mercury.WorldGenerator.Generator.World;
 using Amplitude.Mercury.WorldGenerator.Generator.World.Info;
+using EL2MapGenMod.Tuning;
 using EL2MapGenMod.Util;
 
 namespace EL2MapGenMod.Patches
@@ -40,9 +41,14 @@ namespace EL2MapGenMod.Patches
             snap.Rows = ctx.Grid?.Rows ?? 0;
             snap.Columns = ctx.Grid?.Columns ?? 0;
 
+            snap.SeaLevelsBefore = null;
+            snap.SeaLevelsAfter = (ctx.RecessSeaLevels != null && ctx.RecessSeaLevels.Count > 0)
+                ? new List<int>(ctx.RecessSeaLevels)
+                : null;
+
             snap.ElevationHistogram.Clear();
 
-            var all = ctx.AllDistrict;
+            District[] all = ctx.AllDistrict;
             if (all == null || all.Length == 0)
                 return;
 
@@ -52,13 +58,19 @@ namespace EL2MapGenMod.Patches
             snap.LakeCount = 0;
             snap.RidgeCount = 0;
 
+            snap.BottomBandTileCount = 0;
+            snap.BottomBandWaterContentCount = 0;
+            snap.BottomBandLandLeakCount = 0;
+
             for (int i = 0; i < all.Length; i++)
             {
-                var d = all[i];
-                if (d == null) continue;
+                District d = all[i];
+                if (d == null)
+                    continue;
 
                 int e = d.Elevation;
-                if (!snap.ElevationHistogram.TryGetValue(e, out int c)) c = 0;
+                if (!snap.ElevationHistogram.TryGetValue(e, out int c))
+                    c = 0;
                 snap.ElevationHistogram[e] = c + 1;
 
                 switch (d.Content)
@@ -69,12 +81,51 @@ namespace EL2MapGenMod.Patches
                     case District.Contents.Lake: snap.LakeCount++; break;
                     case District.Contents.Ridge: snap.RidgeCount++; break;
                 }
+
+                if (d.Elevation <= WorldGenTuningProfile.BottomWaterMaxElevation)
+                {
+                    snap.BottomBandTileCount++;
+
+                    bool isWater =
+                        d.Content == District.Contents.Lake ||
+                        d.Content == District.Contents.Coastal ||
+                        d.Content == District.Contents.Ocean;
+
+                    if (isWater)
+                        snap.BottomBandWaterContentCount++;
+                    else
+                        snap.BottomBandLandLeakCount++;
+                }
             }
 
             snap.ContextLakeSetsCount = ctx.Lakes?.Count ?? 0;
             snap.ContextLakeTilesCount = ctx.Lakes == null ? 0 : ctx.Lakes.Sum(s => s?.Count ?? 0);
 
-            WorldgenTelemetry.WriteJsonOncePerRun(ctx, "MapGen_Elevations", snap, ref state.ElevationsSnapshotWritten);
+            if (snap.BottomBandTileCount > 0)
+            {
+                snap.PermanentWaterPercentage =
+                    (100.0 * snap.BottomBandWaterContentCount) / snap.BottomBandTileCount;
+            }
+            else
+            {
+                snap.PermanentWaterPercentage = 0.0;
+            }
+            
+            int totalMapTiles = snap.LandCount + snap.CoastalCount + snap.OceanCount + snap.LakeCount + snap.RidgeCount;
+            if (totalMapTiles > 0)
+            {
+                snap.TotalWaterPercentage = (100.0 * (snap.CoastalCount + snap.OceanCount + snap.LakeCount)) / totalMapTiles;
+            }
+            else
+            {
+                snap.TotalWaterPercentage = 0.0;
+            }
+
+            WorldgenTelemetry.WriteJsonOncePerRun(
+                ctx,
+                "MapGen_Elevations",
+                snap,
+                ref state.ElevationsSnapshotWritten);
         }
     }
 }

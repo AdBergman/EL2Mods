@@ -62,7 +62,7 @@ namespace EL2MapGenMod.Util
             [JsonProperty] public int Rows = 0;
             [JsonProperty] public int Columns = 0;
 
-            [JsonProperty] public Dictionary<int, int> ElevationHistogram = new Dictionary<int, int>();
+            [JsonProperty] public SortedDictionary<int, int> ElevationHistogram = new SortedDictionary<int, int>();
 
             [JsonProperty] public int LandCount = 0;
             [JsonProperty] public int CoastalCount = 0;
@@ -71,6 +71,7 @@ namespace EL2MapGenMod.Util
             [JsonProperty] public int RidgeCount = 0;
 
             [JsonProperty] public double PermanentWaterPercentage = 0.0;
+            [JsonProperty] public double TotalWaterPercentage = 0.0;
 
             [JsonProperty] public int ContextLakeSetsCount = 0;
             [JsonProperty] public int ContextLakeTilesCount = 0;

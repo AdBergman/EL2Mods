@@ -21,6 +21,7 @@ namespace EL2MapGenMod.Tuning
 
             HashSet<District> bottomLayerLakes = new HashSet<District>();
             sbyte maxBottomWaterElevation = WorldGenTuningProfile.BottomWaterMaxElevation;
+            Terrain lakeTerrain = ctx.Input.Settings.GetTerrain(ctx.Input.Settings.LakeTerrain);
 
             for (int i = 0; i < all.Length; i++)
             {
@@ -28,17 +29,41 @@ namespace EL2MapGenMod.Tuning
                 if (d == null)
                     continue;
 
+                // --- NEW: Bump up deep pits to flatten the ocean floor ---
+                if (d.Elevation < maxBottomWaterElevation)
+                {
+                    d.Elevation = maxBottomWaterElevation;
+                }
+                // ---------------------------------------------------------
+
                 if (d.Elevation > maxBottomWaterElevation)
                     continue;
 
                 if (noConvert != null && noConvert.Contains(d))
                     continue;
 
-                if (d.Content == District.Contents.Land)
-                    d.Content = District.Contents.Lake;
+                d.Content = District.Contents.Lake;
+                d.ForbidRiver = true;
+                d.ForbidRidge = true;
+                d.Terrain = lakeTerrain;
+                bottomLayerLakes.Add(d);
 
-                if (d.Content == District.Contents.Lake)
-                    bottomLayerLakes.Add(d);
+                if (d.Positions == null)
+                    continue;
+
+                for (int p = 0; p < d.Positions.Length; p++)
+                {
+                    var hex = d.Positions[p];
+
+                    if (ctx.HasLake != null)
+                        ctx.HasLake[hex.Row, hex.Column] = true;
+
+                    if (ctx.HasRiver != null)
+                        ctx.HasRiver[hex.Row, hex.Column] = false;
+
+                    if (ctx.TerrainData != null)
+                        ctx.TerrainData[hex.Row, hex.Column] = lakeTerrain.Id;
+                }
             }
 
             if (bottomLayerLakes.Count == 0)
