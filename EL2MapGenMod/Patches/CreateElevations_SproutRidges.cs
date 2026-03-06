@@ -2,7 +2,8 @@
 using Amplitude.Mercury.WorldGenerator.Generator.Tasks.Generator;
 using Amplitude.Mercury.WorldGenerator.Generator.World;
 using EL2MapGenMod.Tuning;
-using EL2MapGenMod.Util;
+
+// Removed the using EL2MapGenMod.Util;
 
 namespace EL2MapGenMod.Patches
 {
@@ -11,7 +12,9 @@ namespace EL2MapGenMod.Patches
     {
         private static bool Prefix(CreateElevations __instance, int ridgePresencePercent)
         {
-            WorldGeneratorContext ctx = WorldGenReflection.GetTaskContext(__instance) as WorldGeneratorContext;
+            // FIX: Just access the Context property directly! No reflection needed.
+            WorldGeneratorContext ctx = __instance?.Context;
+            
             if (ctx == null)
                 return true;
 

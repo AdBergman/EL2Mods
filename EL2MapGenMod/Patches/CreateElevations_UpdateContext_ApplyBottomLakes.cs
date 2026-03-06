@@ -1,20 +1,22 @@
-using System.Reflection;
+﻿using System.Reflection;
 using HarmonyLib;
 using Amplitude.Mercury.WorldGenerator.Generator.Tasks.Generator;
 using Amplitude.Mercury.WorldGenerator.Generator.World;
 using EL2MapGenMod.Tuning;
-using EL2MapGenMod.Util;
 
 namespace EL2MapGenMod.Patches
 {
     [HarmonyPatch(typeof(CreateElevations), "UpdateContext")]
-    internal static class CreateElevations_UpdateContext_LayerDistribution
+    internal static class CreateElevations_UpdateContext_ApplyBottomLakes
     {
         private static readonly FieldInfo FinalVerifyPassField =
             AccessTools.Field(typeof(CreateElevations), "finalVerifyPass");
 
-        private static void Prefix(CreateElevations __instance)
+        private static void Postfix(CreateElevations __instance)
         {
+            if (__instance == null)
+                return;
+
             if (FinalVerifyPassField != null)
             {
                 object val = FinalVerifyPassField.GetValue(__instance);
@@ -22,7 +24,7 @@ namespace EL2MapGenMod.Patches
                     return;
             }
 
-            WorldGeneratorContext ctx = WorldGenReflection.GetTaskContext(__instance) as WorldGeneratorContext;
+            WorldGeneratorContext ctx = __instance.Context;
             if (ctx == null)
                 return;
 

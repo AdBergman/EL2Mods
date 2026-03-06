@@ -1,5 +1,4 @@
-﻿
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using HarmonyLib;
@@ -7,7 +6,6 @@ using Amplitude.Mercury.WorldGenerator.Generator.Tasks.Generator;
 using Amplitude.Mercury.WorldGenerator.Generator.World;
 using Amplitude.Mercury.WorldGenerator.Generator.World.Info;
 using EL2MapGenMod.Util;
-using EL2MapGenMod.Tuning;
 
 namespace EL2MapGenMod.Patches
 {
@@ -22,7 +20,6 @@ namespace EL2MapGenMod.Patches
             if (!WorldgenTelemetry.Enabled)
                 return;
 
-            // Only act on final verify pass
             if (FinalVerifyPassField != null)
             {
                 object val = FinalVerifyPassField.GetValue(__instance);
@@ -38,34 +35,10 @@ namespace EL2MapGenMod.Patches
             if (state == null)
                 return;
 
-            // -------------------------
-            // Rebuild RecessSeaLevels (Option B)
-            // -------------------------
-            List<int> before = null;
-            if (ctx.RecessSeaLevels != null && ctx.RecessSeaLevels.Count > 0)
-                before = new List<int>(ctx.RecessSeaLevels);
-
-            var rebuilt = RecessSeaLevelsRebuilder.Rebuild(ctx);
-            if (rebuilt != null && rebuilt.Count > 0)
-            {
-                // Replace in-place to ensure downstream tasks see the rebuilt values
-                ctx.RecessSeaLevels.Clear();
-                for (int i = 0; i < rebuilt.Count; i++)
-                    ctx.RecessSeaLevels.Add(rebuilt[i]);
-            }
-
-            // -------------------------
-            // Snapshot
-            // -------------------------
             var snap = state.Elevations;
             snap.Stage = "CreateElevations.UpdateContext.finalVerifyPass";
             snap.Rows = ctx.Grid?.Rows ?? 0;
             snap.Columns = ctx.Grid?.Columns ?? 0;
-
-            snap.SeaLevelsBefore = before;
-            snap.SeaLevelsAfter = (ctx.RecessSeaLevels != null && ctx.RecessSeaLevels.Count > 0)
-                ? new List<int>(ctx.RecessSeaLevels)
-                : null;
 
             snap.ElevationHistogram.Clear();
 

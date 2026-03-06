@@ -83,11 +83,10 @@
     <ItemGroup>
         <Compile Include="EL2MapGenModPlugin.cs" />
         <Compile Include="Patches\CreateElevations_SproutRidges.cs" />
-        <Compile Include="Patches\CreateElevations_UpdateContext_LayerDistribution.cs" />
+        <Compile Include="Patches\CreateElevations_UpdateContext_ApplyBottomLakes.cs" />
+        <Compile Include="Patches\CreateElevations_UpdateContext_SetSeaLevels.cs" />
         <Compile Include="Patches\CreateElevations_UpdateContext_TelemetrySnapshot.cs" />
-        <Compile Include="Patches\CreatePointOfInterests_ApplyBottomLakes_AfterPOI.cs" />
-        <Compile Include="Patches\CreatePointOfInterests_Execute_TelemetrySummary.cs" />
-        <Compile Include="Patches\CreatePointOfInterests_LowestBandShift_StrategicAndLuxury.cs" />
+        <Compile Include="Patches\Debug_LogResourceSpawns.cs" />
         <Compile Include="Patches\GameOptionsManager_CreateWorldGeneratorFromGameOptions.cs" />
         <Compile Include="Patches\RecessController_LowerSeaLevel_Floor.cs" />
 
@@ -97,12 +96,8 @@
 
         <Compile Include="Tuning\ClampUtil.cs" />
         <Compile Include="Tuning\ElevationBandRebalance.cs" />
-        <Compile Include="Tuning\PersistentSeaTracker.cs" />
-        <Compile Include="Tuning\RecessSeaLevelsRebuilder.cs" />
         <Compile Include="Tuning\WorldGenTuner.cs" />
         <Compile Include="Tuning\WorldGenTuningProfile.cs" />
-
-        <Compile Include="Util\WorldGenReflection.cs" />
 
         <Compile Include="Util\WorldgenTelemetry.cs" />
     </ItemGroup>

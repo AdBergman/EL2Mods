@@ -1,8 +1,4 @@
-﻿// action: UPDATE
-// namespace: EL2MapGenMod.Util
-// class: WorldgenTelemetry
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -15,11 +11,9 @@ namespace EL2MapGenMod.Util
     {
         internal sealed class RunState
         {
-            public bool ElevationsSnapshotWritten;
-            public bool PoiSummaryWritten;
+            public bool ElevationsSnapshotWritten = false;
 
             public readonly ElevationSnapshot Elevations = new ElevationSnapshot();
-            public readonly PoiTelemetry Poi = new PoiTelemetry();
         }
 
         private static readonly ConditionalWeakTable<object, RunState> StateByContext =
@@ -62,47 +56,31 @@ namespace EL2MapGenMod.Util
             File.WriteAllText(file, JsonConvert.SerializeObject(payload, settings));
         }
 
-        // -------------------------
-        // Data Models
-        // -------------------------
-
         internal sealed class ElevationSnapshot
         {
-            public string Stage;
-            public int Rows;
-            public int Columns;
+            [JsonProperty] public string Stage = string.Empty;
+            [JsonProperty] public int Rows = 0;
+            [JsonProperty] public int Columns = 0;
 
-            public Dictionary<int, int> ElevationHistogram = new Dictionary<int, int>();
+            [JsonProperty] public Dictionary<int, int> ElevationHistogram = new Dictionary<int, int>();
 
-            public int LandCount;
-            public int CoastalCount;
-            public int OceanCount;
-            public int LakeCount;
-            public int RidgeCount;
+            [JsonProperty] public int LandCount = 0;
+            [JsonProperty] public int CoastalCount = 0;
+            [JsonProperty] public int OceanCount = 0;
+            [JsonProperty] public int LakeCount = 0;
+            [JsonProperty] public int RidgeCount = 0;
 
-            public int ContextLakeSetsCount;
-            public int ContextLakeTilesCount;
+            [JsonProperty] public double PermanentWaterPercentage = 0.0;
 
-            // NEW: sea levels before/after rebuild
-            public List<int> SeaLevelsBefore;
-            public List<int> SeaLevelsAfter;
-        }
+            [JsonProperty] public int ContextLakeSetsCount = 0;
+            [JsonProperty] public int ContextLakeTilesCount = 0;
 
-        internal sealed class PoiTelemetry
-        {
-            public int TotalChecks;
-            public int AllowedChecks;
+            [JsonProperty] public int BottomBandTileCount = 0;
+            [JsonProperty] public int BottomBandWaterContentCount = 0;
+            [JsonProperty] public int BottomBandLandLeakCount = 0;
 
-            public int Reject_NullOrInvalid;
-            public int Reject_TypeNotTracked;
-            public int Reject_Content;
-            public int Reject_BandElevation;
-            public int Reject_AlreadyHasPoi;
-            public int Reject_WonderNear;
-            public int Reject_RiverConstraint;
-
-            public int StrategicLuxuryChecks;
-            public int StrategicLuxuryShifted;
+            [JsonProperty] public List<int> SeaLevelsBefore = null;
+            [JsonProperty] public List<int> SeaLevelsAfter = null;
         }
     }
 }

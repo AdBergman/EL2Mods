@@ -1,7 +1,4 @@
-﻿// namespace: EL2MapGenMod.Tuning
-// class: BottomLayerLakeEnforcer
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
+﻿using System.Collections.Generic;
 using Amplitude.Mercury.WorldGenerator.Generator.World;
 using Amplitude.Mercury.WorldGenerator.Generator.World.Info;
 
@@ -9,64 +6,60 @@ namespace EL2MapGenMod.Tuning
 {
     internal static class BottomLayerLakeEnforcer
     {
-        private sealed class State
-        {
-            public HashSet<District> LastInjectedBottomLakeSet;
-        }
-
-        private static readonly ConditionalWeakTable<WorldGeneratorContext, State> StateByContext
-            = new ConditionalWeakTable<WorldGeneratorContext, State>();
-
         public static void Apply(WorldGeneratorContext ctx)
         {
-            if (ctx == null) return;
-            if (!WorldGenTuningProfile.EnforceBottomLayerLakes) return;
+            if (ctx == null)
+                return;
 
             District[] all = ctx.AllDistrict;
-            if (all == null || all.Length == 0) return;
-
-            HashSet<District> forced = PersistentSeaTracker.GetForcedSeas(ctx);
+            if (all == null || all.Length == 0)
+                return;
 
             HashSet<District> noConvert = null;
             if (WorldGenTuningProfile.ProtectStartingIslandsFromBottomLakeConversion)
                 noConvert = BuildNoConvertSetFromStartingIslands(ctx);
 
             HashSet<District> bottomLayerLakes = new HashSet<District>();
+            sbyte maxBottomWaterElevation = WorldGenTuningProfile.BottomWaterMaxElevation;
 
             for (int i = 0; i < all.Length; i++)
             {
                 District d = all[i];
-                if (d == null) continue;
+                if (d == null)
+                    continue;
 
-                bool isForced = forced != null && forced.Contains(d);
-                if (!isForced && d.Elevation > 0) continue;
+                if (d.Elevation > maxBottomWaterElevation)
+                    continue;
 
-                if (noConvert != null && noConvert.Contains(d)) continue;
+                if (noConvert != null && noConvert.Contains(d))
+                    continue;
 
-                if (isForced)
-                {
-                    // restore no matter what vanilla did
-                    d.Elevation = -1; // strongest guarantee against recesses
+                if (d.Content == District.Contents.Land)
                     d.Content = District.Contents.Lake;
-                }
-                else
-                {
-                    if (d.Content == District.Contents.Land)
-                        d.Content = District.Contents.Lake;
-                }
 
                 if (d.Content == District.Contents.Lake)
                     bottomLayerLakes.Add(d);
             }
 
-            if (bottomLayerLakes.Count == 0) return;
+            if (bottomLayerLakes.Count == 0)
+                return;
 
-            // optional de-dupe (safer if vanilla already created lake sets)
+            if (ctx.Lakes == null)
+                ctx.Lakes = new List<HashSet<District>>();
+
             for (int i = ctx.Lakes.Count - 1; i >= 0; i--)
             {
-                var existing = ctx.Lakes[i];
+                HashSet<District> existing = ctx.Lakes[i];
+                if (existing == null)
+                {
+                    ctx.Lakes.RemoveAt(i);
+                    continue;
+                }
+
                 existing.ExceptWith(bottomLayerLakes);
-                if (existing.Count == 0) ctx.Lakes.RemoveAt(i);
+
+                if (existing.Count == 0)
+                    ctx.Lakes.RemoveAt(i);
             }
 
             ctx.Lakes.Add(bottomLayerLakes);
@@ -87,7 +80,7 @@ namespace EL2MapGenMod.Tuning
 
                 foreach (Region r in regions)
                 {
-                    if (r?.Districts == null)
+                    if (r == null || r.Districts == null)
                         continue;
 
                     foreach (District d in r.Districts)

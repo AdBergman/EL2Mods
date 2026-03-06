@@ -1,168 +1,68 @@
-// action: UPDATE
-// namespace: EL2MapGenMod.Tuning
-// class: WorldGenTuningProfile
-
 namespace EL2MapGenMod.Tuning
 {
     internal static class WorldGenTuningProfile
     {
-        // ---------------------------------------------------------------------
-        // Telemetry / Observability
-        // ---------------------------------------------------------------------
         public const bool EnableWorldgenTelemetry = true;
         public const string TelemetryOutputFolder = "EL2MapGenMod";
 
-        // ---------------------------------------------------------------------
-        // Canonical rule going forward:
-        // ---------------------------------------------------------------------
-        public const bool EnforceBottomLayerLakes = true;
-
-        // Safety: avoid converting starting island districts (spawn safety).
-        public const bool ProtectStartingIslandsFromBottomLakeConversion = true;
-
-        // Map size scaling:
-        // If WidthScale and HeightScale both use this percent, then AREA scales by (p/100)^2.
         public const int MapScalePercent = 112;
+        public const sbyte StartLandElevationTarget = 10;
+        public const int ElevationGrowPercentBonus = 45; // Increased to push for 30% water
 
-        // Land baseline:
-        // Vanilla initial sea is (StartLandElevation - 1).
-        // GOAL: Land starts at 5, sea at 4.
-        public const sbyte StartLandElevationTarget = 5;
-
-        // ---------------------------------------------------------------------
-        // Ridges / verticality (global tuning knobs)
-        // ---------------------------------------------------------------------
-        public const int MaxLandElevationRaise = 4;
-        public const int ElevationGrowPercentBonus = 10;
-
-        public const int RidgePresenceFloor = 75; // percent
-        public const int RidgeMinElevationDelta = -1; // slightly easier to qualify as ridge candidate
+        public const int MaxLandElevationRaise = 8;
+        public const int RidgePresenceFloor = 75;
+        public const int RidgeMinElevationDelta = -1;
         public const int RidgeMaxSizeBonus = 2;
 
-        // ---------------------------------------------------------------------
-        // Rivers
-        // ---------------------------------------------------------------------
-        public const int RiverPresenceFloor = 80; // percent
+        public const int RiverPresenceFloor = 80;
         public const int RiverSeedCountBonus = 20;
-
         public const int RiverMinCountBonus = 3;
         public const int RiverMaxCountBonus = 4;
-
         public const int RiverMaxLengthBonus = 3;
         public const int RiverSourcesMinDistanceDelta = -1;
 
-        // ---------------------------------------------------------------------
-        // Elevation band rebalance (CreateElevations: ridges + lakes)
-        // Used by ElevationBandRebalance (DigLakesBanded/SproutRidgesBanded).
-        // ---------------------------------------------------------------------
-
-        public const sbyte RidgeStartingBandMinElevation = 3;  // 3-4
-        public const sbyte RidgeStartingBandMaxElevation = 4;
+        public const sbyte RidgeStartingBandMinElevation = 6;
+        public const sbyte RidgeStartingBandMaxElevation = 7;
         public const int RidgeStartingBandCandidateRejectPercent = 30;
 
-        public const sbyte RidgeIntermediateBandMinElevation = 1; // 1-2
-        public const sbyte RidgeIntermediateBandMaxElevation = 3;
+        public const sbyte RidgeIntermediateBandMinElevation = 4;
+        public const sbyte RidgeIntermediateBandMaxElevation = 6;
         public const int RidgeIntermediateBandPresenceBonusPercent = 15;
 
-        public const sbyte RidgeDeepBandMaxElevation = 0;
+        public const sbyte RidgeDeepBandMaxElevation = 3;
         public const int RidgeDeepBandCandidateRejectPercent = 60;
 
-        public const sbyte LakePreferredBandMinElevation = 1; // 1-3
-        public const sbyte LakePreferredBandMaxElevation = 3;
+        public const int LakePresencePercentBonus = 50;
+        public const int MinLakeAreaDelta = 0;
+        public const int MaxLakeAreaDelta = 2;
+        public const int MinLakeAreaFloor = 1;
+        public const int MaxLakeAreaFloor = 2;
 
-        public const sbyte LakeTooLowMaxElevation = 0;
-        public const sbyte LakeTooHighMinElevation = 4;
-        public const int LakeTooHighRejectPercent = 50;
-
+        public const int PersistentSeaLevelFloor = 3;
+        
+        
         // ---------------------------------------------------------------------
         // BOTTOM WATER TARGET (canonical knobs)
         // ---------------------------------------------------------------------
 
-        // Desired % of total map tiles that should end up as bottom-band (Elevation <= 0) water.
-        // GOAL: ~30% of the map is permanent bottom layer water for the whole game.
+        // Every tile at this elevation or lower is forced into bottom-band water.
+        public const sbyte BottomWaterMaxElevation = 3;
+
+        // Desired % of total map tiles that should end up as bottom-band water.
         public const int TargetBottomWaterPercent = 30;
 
         // If true, ALL lakes (seas + regular lakes) clamp their bottoms to <= 0.
         public const bool ClampAllLakeBottomToZeroOrLower = true;
 
-        // If true, force sea bottoms to be <= 0 (guarantees lowest band water area)
+        // If true, force sea bottoms to be <= 0.
         public const bool ClampInlandSeaBottomToZeroOrLower = true;
 
-        // How deep lakes are dug relative to their surrounding ring.
         public const int LakeDigDepth = 5;
-
-        // Allow low elevation lake seeds (needed for bottom-band expansion).
         public const bool AllowLowElevationLakeSeeds = true;
-
-        // Prevent seas from touching map edge (keeps them inland-ish).
         public const bool InlandSeasAvoidGridEdge = false;
-
-        // Inland seas: build a few huge lakes instead of many mediums.
         public const int InlandSeaCount = 4;
-
-        // Kept for backward compatibility / debugging; actual per-sea target may be computed from TargetBottomWaterPercent.
         public const int InlandSeaTargetPercentPerSea = 6;
-
-        // After seas are built, do we still allow normal lakes?
-        public const bool AllowRegularLakesAfterSeas = true;
-
-        // ---------------------------------------------------------------------
-        // Generator-level lake quantity tuning (WorldGeneratorOptions)
-        // ---------------------------------------------------------------------
-
-        // Additive boost to WorldGeneratorOptions.LakePresencePercent (byte 0..100).
-        public const int LakePresencePercentBonus = 50;
-
-        // Allow smaller lakes by decreasing MinLakeArea (sbyte). Example: 3 -> 2 with -1.
-        public const int MinLakeAreaDelta = 0;
-
-        // Optional: shrink MaxLakeArea to avoid mega-lakes and encourage more separate lakes.
-        public const int MaxLakeAreaDelta = 2;
-
-        // Optional: loosen MaxCliffDeltaElevation a bit (affects basin candidate validity).
-        public const int MaxCliffDeltaElevationDelta = 0;
-
-        // Safety floors.
-        public const int MinLakeAreaFloor = 1;
-        public const int MaxLakeAreaFloor = 2;
-
-        // ---------------------------------------------------------------------
-        // Recession safety
-        // ---------------------------------------------------------------------
-
-        // Recess floor: sea will not fall below this elevation.
-        // With sea starting at 4, floor=1 allows 4->3->2->1 across 3 recess drops.
-        public const int PersistentSeaLevelFloor = 1;
-
-        // ---------------------------------------------------------------------
-        // Strategic/Luxury placement policy
-        // ---------------------------------------------------------------------
-
-        // We do NOT want brittle hard elevation windows right now.
-        // We want placement to follow the (rebuilt) RecessSeaLevels so timing matches recession,
-        // while clamping to "available tiers" and only shifting away from the bottom lake band.
-        public const bool UseHardStrategicLuxuryElevationWindows = false;
-
-        // Clamp strategics/luxuries to only spawn in "available tiers".
-        // This prevents high tiers from being placed into bands that never surface (or surface too late).
-        public const bool ClampStrategicLuxuryToAvailableTiers = true;
-
-        // Minimum tier index for strategics/luxuries:
-        // Set to 1 to ensure no strategic resources are visible before the FIRST recession.
-        public const int StrategicLuxuryMinRecessIndex = 1;
-
-        // Maximum tier index for strategics/luxuries:
-        // With 3 recessions, this is typically 3 (tiers 1..3 allowed).
-        public const int StrategicLuxuryMaxRecessIndex = 3;
-
-        // ---------------------------------------------------------------------
-        // (Legacy / parked) Hard elevation window knobs
-        // Kept so older code/branches compile if referenced, but disabled above.
-        // ---------------------------------------------------------------------
-
-        public static readonly int[] StrategicLuxuryLowerExclusive = { 11, 8, 4, 2, 0 };
-        public static readonly int[] StrategicLuxuryUpperInclusive = { 15, 11, 8, 4, 2 };
-        public const int StrategicLuxuryFallbackLowerExclusive = 4;
-        public const int StrategicLuxuryFallbackUpperInclusive = 15;
+        
+        public const bool ProtectStartingIslandsFromBottomLakeConversion = true;
     }
 }
