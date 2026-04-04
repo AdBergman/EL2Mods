@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EL2.LiveJournal", "EL2.Live
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EL2MapGenMod", "EL2MapGenMod\EL2MapGenMod.csproj", "{12FE02F9-1917-4D84-B002-FEFE3F26A95C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EL2.BulkTrade", "EL2.BulkTrade\EL2.BulkTrade.csproj", "{71F864B1-3B9F-4878-AB29-6305E5354172}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{12FE02F9-1917-4D84-B002-FEFE3F26A95C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{12FE02F9-1917-4D84-B002-FEFE3F26A95C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{12FE02F9-1917-4D84-B002-FEFE3F26A95C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{71F864B1-3B9F-4878-AB29-6305E5354172}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{71F864B1-3B9F-4878-AB29-6305E5354172}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{71F864B1-3B9F-4878-AB29-6305E5354172}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{71F864B1-3B9F-4878-AB29-6305E5354172}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
