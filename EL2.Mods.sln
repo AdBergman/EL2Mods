@@ -8,6 +8,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EL2MapGenMod", "EL2MapGenMo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EL2.BulkTrade", "EL2.BulkTrade\EL2.BulkTrade.csproj", "{71F864B1-3B9F-4878-AB29-6305E5354172}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EL2.SyntheticHarmony", "EL2.SyntheticHarmony\EL2.SyntheticHarmony.csproj", "{EB4D9607-D32D-4942-91E7-FA3B93101E39}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +32,9 @@ Global
 		{71F864B1-3B9F-4878-AB29-6305E5354172}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{71F864B1-3B9F-4878-AB29-6305E5354172}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{71F864B1-3B9F-4878-AB29-6305E5354172}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB4D9607-D32D-4942-91E7-FA3B93101E39}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB4D9607-D32D-4942-91E7-FA3B93101E39}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB4D9607-D32D-4942-91E7-FA3B93101E39}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB4D9607-D32D-4942-91E7-FA3B93101E39}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
