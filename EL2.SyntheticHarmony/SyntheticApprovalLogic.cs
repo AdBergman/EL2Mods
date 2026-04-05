@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
 
@@ -12,17 +13,42 @@ namespace EL2.SyntheticHarmony
 
         private static object cachedSandbox;
         private static MemberInfo sandboxTurnMember;
+        private static MemberInfo sandboxStaticMember;
         private static bool initialized;
-        
+
+        private static readonly Dictionary<Type, MemberInfo> isHumanMemberCache = new Dictionary<Type, MemberInfo>();
+        private static readonly Dictionary<Type, MemberInfo> isAiMemberCache = new Dictionary<Type, MemberInfo>();
+        private static readonly Dictionary<Type, MemberInfo> empireIndexMemberCache = new Dictionary<Type, MemberInfo>();
+        private static readonly Dictionary<Type, MemberInfo> settlementsMemberCache = new Dictionary<Type, MemberInfo>();
+        private static readonly Dictionary<Type, MemberInfo> approvalMemberCache = new Dictionary<Type, MemberInfo>();
+        private static readonly Dictionary<Type, MethodInfo> getPropertyValueMethodCache = new Dictionary<Type, MethodInfo>();
+        private static readonly Dictionary<Type, MethodInfo> getPropertyIndexMethodCache = new Dictionary<Type, MethodInfo>();
+        private static readonly Dictionary<Type, FieldInfo> propertiesFieldCache = new Dictionary<Type, FieldInfo>();
+        private static readonly Dictionary<string, Type> typeByFullNameCache = new Dictionary<string, Type>();
+        private static readonly Dictionary<string, FieldInfo> boxedFieldCache = new Dictionary<string, FieldInfo>();
+        private static readonly Dictionary<Type, PropertyInfo> countPropertyCache = new Dictionary<Type, PropertyInfo>();
+        private static readonly Dictionary<Type, FieldInfo> countFieldCache = new Dictionary<Type, FieldInfo>();
+
+        private static Type cachedFixedPointType;
+        private static MethodInfo cachedFixedPointImplicitFromInt;
+        private static MethodInfo cachedFixedPointImplicitFromFloat;
+        private static FieldInfo cachedFixedPointRawField;
+        private static bool fixedPointReflectionInitialized;
+
+        private static Type cachedSimulationControllerType;
+        private static FieldInfo cachedGlobalPropertyRepositoryField;
+        private static MethodInfo cachedSetGlobalPropertyValueMethod;
+        private static bool globalRepositoryReflectionInitialized;
+
         internal static int GetTargetAIBaseSettlementApproval()
         {
             int turn = GetTurn();
-            return 75 + (turn / 10) * 5;
+            return 65 + (turn / 10) * 5;
         }
 
         internal static bool IsReady()
         {
-            if (initialized)
+            if (initialized && cachedSandbox != null && sandboxTurnMember != null)
                 return true;
 
             try
@@ -37,6 +63,8 @@ namespace EL2.SyntheticHarmony
             }
             catch
             {
+                initialized = false;
+                sandboxTurnMember = null;
                 return false;
             }
         }
@@ -50,16 +78,26 @@ namespace EL2.SyntheticHarmony
             if (sandbox == null || sandboxTurnMember == null)
                 return 0;
 
-            object value = GetValue(sandboxTurnMember, sandbox);
-            return value is int i ? i : 0;
+            try
+            {
+                object value = GetValue(sandboxTurnMember, sandbox);
+                return value is int i ? i : 0;
+            }
+            catch
+            {
+                cachedSandbox = null;
+                sandboxTurnMember = null;
+                initialized = false;
+                return 0;
+            }
         }
-        
+
         internal static bool IsHuman(object empire)
         {
             if (empire == null)
                 return false;
 
-            MemberInfo member = FindFieldOrPropertyInHierarchy(empire.GetType(), "IsControlledByHuman");
+            MemberInfo member = GetCachedHierarchyMember(isHumanMemberCache, empire.GetType(), "IsControlledByHuman");
             if (member == null)
                 return false;
 
@@ -75,7 +113,7 @@ namespace EL2.SyntheticHarmony
             if (IsHuman(empire))
                 return false;
 
-            MemberInfo member = FindFieldOrPropertyInHierarchy(empire.GetType(), "IsAIBrainActivated");
+            MemberInfo member = GetCachedHierarchyMember(isAiMemberCache, empire.GetType(), "IsAIBrainActivated");
             if (member != null)
             {
                 object value = GetValue(member, empire);
@@ -112,7 +150,7 @@ namespace EL2.SyntheticHarmony
             if (empire == null)
                 return -1;
 
-            MemberInfo member = FindFieldOrPropertyInHierarchy(empire.GetType(), "Index");
+            MemberInfo member = GetCachedHierarchyMember(empireIndexMemberCache, empire.GetType(), "Index");
             if (member == null)
                 return -1;
 
@@ -125,7 +163,7 @@ namespace EL2.SyntheticHarmony
             if (empire == null)
                 return false;
 
-            MemberInfo member = FindFieldOrPropertyInHierarchy(empire.GetType(), "Settlements");
+            MemberInfo member = GetCachedHierarchyMember(settlementsMemberCache, empire.GetType(), "Settlements");
             if (member == null)
                 return false;
 
@@ -133,9 +171,15 @@ namespace EL2.SyntheticHarmony
             if (value == null)
                 return false;
 
-            PropertyInfo countProperty = value.GetType().GetProperty(
-                "Count",
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            Type valueType = value.GetType();
+
+            if (!countPropertyCache.TryGetValue(valueType, out PropertyInfo countProperty))
+            {
+                countProperty = valueType.GetProperty(
+                    "Count",
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                countPropertyCache[valueType] = countProperty;
+            }
 
             if (countProperty != null)
             {
@@ -143,9 +187,13 @@ namespace EL2.SyntheticHarmony
                 return countValue is int count && count > 0;
             }
 
-            FieldInfo countField = value.GetType().GetField(
-                "Count",
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (!countFieldCache.TryGetValue(valueType, out FieldInfo countField))
+            {
+                countField = valueType.GetField(
+                    "Count",
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                countFieldCache[valueType] = countField;
+            }
 
             if (countField != null)
             {
@@ -161,7 +209,7 @@ namespace EL2.SyntheticHarmony
             if (empire == null)
                 return "NULL";
 
-            MemberInfo member = FindFieldOrPropertyInHierarchy(empire.GetType(), "Approval");
+            MemberInfo member = GetCachedHierarchyMember(approvalMemberCache, empire.GetType(), "Approval");
             if (member == null)
                 return "NO_MEMBER";
 
@@ -176,12 +224,19 @@ namespace EL2.SyntheticHarmony
 
             try
             {
-                MethodInfo method = entity.GetType().GetMethod(
-                    "GetPropertyValue",
-                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                    null,
-                    new[] { typeof(string) },
-                    null);
+                Type entityType = entity.GetType();
+
+                if (!getPropertyValueMethodCache.TryGetValue(entityType, out MethodInfo method))
+                {
+                    method = entityType.GetMethod(
+                        "GetPropertyValue",
+                        BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                        null,
+                        new[] { typeof(string) },
+                        null);
+
+                    getPropertyValueMethodCache[entityType] = method;
+                }
 
                 if (method == null)
                     return "NO_METHOD";
@@ -215,6 +270,18 @@ namespace EL2.SyntheticHarmony
             return GetSimulationPropertyValueString(empire, "sumofapproval");
         }
 
+        internal static bool IsBaseSettlementApprovalEqualTo(object empire, int targetValue)
+        {
+            string current = GetBaseSettlementApprovalString(empire);
+            if (string.IsNullOrEmpty(current))
+                return false;
+
+            if (current.EndsWith(".00", StringComparison.Ordinal))
+                current = current.Substring(0, current.Length - 3);
+
+            return int.TryParse(current, out int parsed) && parsed == targetValue;
+        }
+
         private static bool ForceSimulationPropertyValue(object entity, string propertyName, int targetValue)
         {
             if (entity == null || string.IsNullOrEmpty(propertyName))
@@ -224,12 +291,19 @@ namespace EL2.SyntheticHarmony
             if (rawValue == int.MinValue)
                 return false;
 
-            MethodInfo getPropertyIndexMethod = entity.GetType().GetMethod(
-                "GetPropertyIndex",
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                null,
-                new[] { typeof(string) },
-                null);
+            Type entityType = entity.GetType();
+
+            if (!getPropertyIndexMethodCache.TryGetValue(entityType, out MethodInfo getPropertyIndexMethod))
+            {
+                getPropertyIndexMethod = entityType.GetMethod(
+                    "GetPropertyIndex",
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                    null,
+                    new[] { typeof(string) },
+                    null);
+
+                getPropertyIndexMethodCache[entityType] = getPropertyIndexMethod;
+            }
 
             if (getPropertyIndexMethod == null)
                 return false;
@@ -238,7 +312,12 @@ namespace EL2.SyntheticHarmony
             if (!(propertyIndexObject is int propertyIndex) || propertyIndex < 0)
                 return false;
 
-            FieldInfo propertiesField = FindFieldInHierarchy(entity.GetType(), "Properties");
+            if (!propertiesFieldCache.TryGetValue(entityType, out FieldInfo propertiesField))
+            {
+                propertiesField = FindFieldInHierarchy(entityType, "Properties");
+                propertiesFieldCache[entityType] = propertiesField;
+            }
+
             if (propertiesField == null)
                 return false;
 
@@ -257,7 +336,7 @@ namespace EL2.SyntheticHarmony
             if (globalPropertyIndex >= 0)
                 TrySetGlobalPropertyValue(globalPropertyIndex, rawValue);
 
-            MemberInfo namedPropertyMember = FindFieldOrPropertyInHierarchy(entity.GetType(), propertyName);
+            MemberInfo namedPropertyMember = FindFieldOrPropertyInHierarchy(entityType, propertyName);
             if (namedPropertyMember is FieldInfo fieldInfo)
             {
                 object propertyStructBoxed = fieldInfo.GetValue(entity);
@@ -273,79 +352,102 @@ namespace EL2.SyntheticHarmony
 
         private static int ConvertIntToFixedPointRaw(int value)
         {
-            Type fixedPointType = FindTypeByFullName("Amplitude.Framework.FixedPoint")
-                               ?? FindTypeByFullName("Amplitude.FixedPoint");
+            EnsureFixedPointReflection();
 
-            if (fixedPointType == null)
+            if (cachedFixedPointType == null || cachedFixedPointRawField == null)
                 return int.MinValue;
 
-            MethodInfo implicitFromInt = fixedPointType.GetMethod(
-                "op_Implicit",
-                BindingFlags.Public | BindingFlags.Static,
-                null,
-                new[] { typeof(int) },
-                null);
-
-            if (implicitFromInt != null)
+            if (cachedFixedPointImplicitFromInt != null)
             {
-                object fixedPoint = implicitFromInt.Invoke(null, new object[] { value });
-                FieldInfo rawField = fixedPointType.GetField(
-                    "RawValue",
-                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-
-                if (rawField != null)
-                    return (int)rawField.GetValue(fixedPoint);
+                object fixedPoint = cachedFixedPointImplicitFromInt.Invoke(null, new object[] { value });
+                if (fixedPoint != null)
+                    return (int)cachedFixedPointRawField.GetValue(fixedPoint);
             }
 
-            MethodInfo implicitFromFloat = fixedPointType.GetMethod(
-                "op_Implicit",
-                BindingFlags.Public | BindingFlags.Static,
-                null,
-                new[] { typeof(float) },
-                null);
-
-            if (implicitFromFloat != null)
+            if (cachedFixedPointImplicitFromFloat != null)
             {
-                object fixedPoint = implicitFromFloat.Invoke(null, new object[] { (float)value });
-                FieldInfo rawField = fixedPointType.GetField(
-                    "RawValue",
-                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-
-                if (rawField != null)
-                    return (int)rawField.GetValue(fixedPoint);
+                object fixedPoint = cachedFixedPointImplicitFromFloat.Invoke(null, new object[] { (float)value });
+                if (fixedPoint != null)
+                    return (int)cachedFixedPointRawField.GetValue(fixedPoint);
             }
 
             return int.MinValue;
         }
 
+        private static void EnsureFixedPointReflection()
+        {
+            if (fixedPointReflectionInitialized)
+                return;
+
+            cachedFixedPointType = FindTypeByFullName("Amplitude.Framework.FixedPoint")
+                                ?? FindTypeByFullName("Amplitude.FixedPoint");
+
+            if (cachedFixedPointType != null)
+            {
+                cachedFixedPointImplicitFromInt = cachedFixedPointType.GetMethod(
+                    "op_Implicit",
+                    BindingFlags.Public | BindingFlags.Static,
+                    null,
+                    new[] { typeof(int) },
+                    null);
+
+                cachedFixedPointImplicitFromFloat = cachedFixedPointType.GetMethod(
+                    "op_Implicit",
+                    BindingFlags.Public | BindingFlags.Static,
+                    null,
+                    new[] { typeof(float) },
+                    null);
+
+                cachedFixedPointRawField = cachedFixedPointType.GetField(
+                    "RawValue",
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            }
+
+            fixedPointReflectionInitialized = true;
+        }
+
         private static void TrySetGlobalPropertyValue(int globalPropertyIndex, int rawValue)
         {
-            Type simulationControllerType = FindTypeByFullName("Amplitude.Framework.Simulation.SimulationController");
-            if (simulationControllerType == null)
+            EnsureGlobalRepositoryReflection();
+
+            if (cachedGlobalPropertyRepositoryField == null || cachedSetGlobalPropertyValueMethod == null)
                 return;
 
-            FieldInfo globalRepositoryField = simulationControllerType.GetField(
-                "GlobalPropertyRepository",
-                BindingFlags.Static | BindingFlags.NonPublic);
-
-            if (globalRepositoryField == null)
-                return;
-
-            object globalRepository = globalRepositoryField.GetValue(null);
+            object globalRepository = cachedGlobalPropertyRepositoryField.GetValue(null);
             if (globalRepository == null)
                 return;
 
-            MethodInfo setValueMethod = globalRepository.GetType().GetMethod(
-                "SetGlobalPropertyValue",
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                null,
-                new[] { typeof(int), typeof(int) },
-                null);
+            cachedSetGlobalPropertyValueMethod.Invoke(globalRepository, new object[] { globalPropertyIndex, rawValue });
+        }
 
-            if (setValueMethod == null)
+        private static void EnsureGlobalRepositoryReflection()
+        {
+            if (globalRepositoryReflectionInitialized)
                 return;
 
-            setValueMethod.Invoke(globalRepository, new object[] { globalPropertyIndex, rawValue });
+            cachedSimulationControllerType = FindTypeByFullName("Amplitude.Framework.Simulation.SimulationController");
+            if (cachedSimulationControllerType != null)
+            {
+                cachedGlobalPropertyRepositoryField = cachedSimulationControllerType.GetField(
+                    "GlobalPropertyRepository",
+                    BindingFlags.Static | BindingFlags.NonPublic);
+
+                Type repositoryType = cachedGlobalPropertyRepositoryField != null
+                    ? cachedGlobalPropertyRepositoryField.FieldType
+                    : null;
+
+                if (repositoryType != null)
+                {
+                    cachedSetGlobalPropertyValueMethod = repositoryType.GetMethod(
+                        "SetGlobalPropertyValue",
+                        BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                        null,
+                        new[] { typeof(int), typeof(int) },
+                        null);
+                }
+            }
+
+            globalRepositoryReflectionInitialized = true;
         }
 
         private static object GetSandbox()
@@ -353,11 +455,21 @@ namespace EL2.SyntheticHarmony
             if (cachedSandbox != null)
                 return cachedSandbox;
 
+            if (sandboxStaticMember != null)
+            {
+                object sandbox = GetValue(sandboxStaticMember, null);
+                if (sandbox != null)
+                {
+                    cachedSandbox = sandbox;
+                    return sandbox;
+                }
+            }
+
             Type managerType = AccessTools.TypeByName(SandboxManagerTypeName);
             if (managerType != null)
             {
-                MemberInfo member = FindStaticFieldOrProperty(managerType, "Sandbox");
-                object sandbox = GetValue(member, null);
+                sandboxStaticMember = FindStaticFieldOrProperty(managerType, "Sandbox");
+                object sandbox = GetValue(sandboxStaticMember, null);
                 if (sandbox != null)
                 {
                     cachedSandbox = sandbox;
@@ -368,8 +480,8 @@ namespace EL2.SyntheticHarmony
             Type sandboxType = AccessTools.TypeByName(SandboxTypeName);
             if (sandboxType != null)
             {
-                MemberInfo member = FindStaticFieldOrProperty(sandboxType, "Sandbox");
-                object sandbox = GetValue(member, null);
+                sandboxStaticMember = FindStaticFieldOrProperty(sandboxType, "Sandbox");
+                object sandbox = GetValue(sandboxStaticMember, null);
                 if (sandbox != null)
                 {
                     cachedSandbox = sandbox;
@@ -409,6 +521,7 @@ namespace EL2.SyntheticHarmony
             while (current != null)
             {
                 BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+
                 FieldInfo field = current.GetField(name, flags);
                 if (field != null)
                     return field;
@@ -437,6 +550,23 @@ namespace EL2.SyntheticHarmony
             return null;
         }
 
+        private static MemberInfo GetCachedHierarchyMember(
+            Dictionary<Type, MemberInfo> cache,
+            Type type,
+            string memberName)
+        {
+            if (type == null)
+                return null;
+
+            if (!cache.TryGetValue(type, out MemberInfo member))
+            {
+                member = FindFieldOrPropertyInHierarchy(type, memberName);
+                cache[type] = member;
+            }
+
+            return member;
+        }
+
         private static object GetValue(MemberInfo member, object instance)
         {
             if (member == null)
@@ -457,8 +587,16 @@ namespace EL2.SyntheticHarmony
                 return;
 
             Type type = boxedStruct.GetType();
-            FieldInfo field = type.GetField(fieldName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            field?.SetValue(boxedStruct, value);
+            string cacheKey = type.FullName + "|" + fieldName;
+
+            if (!boxedFieldCache.TryGetValue(cacheKey, out FieldInfo field))
+            {
+                field = type.GetField(fieldName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                boxedFieldCache[cacheKey] = field;
+            }
+
+            if (field != null)
+                field.SetValue(boxedStruct, value);
         }
 
         private static int GetIntFieldValueIfExists(object boxedStruct, string fieldName, int fallback)
@@ -467,7 +605,14 @@ namespace EL2.SyntheticHarmony
                 return fallback;
 
             Type type = boxedStruct.GetType();
-            FieldInfo field = type.GetField(fieldName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            string cacheKey = type.FullName + "|" + fieldName;
+
+            if (!boxedFieldCache.TryGetValue(cacheKey, out FieldInfo field))
+            {
+                field = type.GetField(fieldName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                boxedFieldCache[cacheKey] = field;
+            }
+
             if (field == null)
                 return fallback;
 
@@ -477,28 +622,26 @@ namespace EL2.SyntheticHarmony
 
         private static Type FindTypeByFullName(string fullName)
         {
+            if (string.IsNullOrEmpty(fullName))
+                return null;
+
+            if (typeByFullNameCache.TryGetValue(fullName, out Type cachedType))
+                return cachedType;
+
             Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
 
             for (int i = 0; i < assemblies.Length; i++)
             {
                 Type type = assemblies[i].GetType(fullName, false);
                 if (type != null)
+                {
+                    typeByFullNameCache[fullName] = type;
                     return type;
+                }
             }
 
+            typeByFullNameCache[fullName] = null;
             return null;
-        }
-        
-        internal static bool IsBaseSettlementApprovalEqualTo(object empire, int targetValue)
-        {
-            string current = GetBaseSettlementApprovalString(empire);
-            if (string.IsNullOrEmpty(current))
-                return false;
-
-            if (current.EndsWith(".00", StringComparison.Ordinal))
-                current = current.Substring(0, current.Length - 3);
-
-            return int.TryParse(current, out int parsed) && parsed == targetValue;
         }
     }
 }
