@@ -20,6 +20,11 @@ namespace EL2.SyntheticHarmony.Patches
         {
             if (empire == null)
                 return;
+            if (SyntheticApprovalLogic.IsHuman(empire))
+                return;
+
+            if (!SyntheticApprovalLogic.IsAI(empire))
+                return;
 
             try
             {

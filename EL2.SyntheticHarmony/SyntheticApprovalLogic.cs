@@ -49,26 +49,37 @@ namespace EL2.SyntheticHarmony
             object value = GetValue(sandboxTurnMember, sandbox);
             return value is int i ? i : 0;
         }
+        
+        internal static bool IsHuman(object empire)
+        {
+            if (empire == null)
+                return false;
+
+            MemberInfo member = FindFieldOrPropertyInHierarchy(empire.GetType(), "IsControlledByHuman");
+            if (member == null)
+                return false;
+
+            object value = GetValue(member, empire);
+            return value is bool isHuman && isHuman;
+        }
 
         internal static bool IsAI(object empire)
         {
             if (empire == null)
                 return false;
 
+            if (IsHuman(empire))
+                return false;
+
             MemberInfo member = FindFieldOrPropertyInHierarchy(empire.GetType(), "IsAIBrainActivated");
             if (member != null)
             {
                 object value = GetValue(member, empire);
-                if (value is bool isAiBrain)
-                    return isAiBrain;
+                if (value is bool isAiBrainActivated)
+                    return isAiBrainActivated;
             }
 
-            member = FindFieldOrPropertyInHierarchy(empire.GetType(), "IsControlledByHuman");
-            if (member == null)
-                return false;
-
-            object humanValue = GetValue(member, empire);
-            return humanValue is bool isHuman && !isHuman;
+            return true;
         }
 
         internal static IEnumerable GetMajorEmpires()

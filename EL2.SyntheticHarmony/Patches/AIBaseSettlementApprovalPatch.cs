@@ -23,6 +23,9 @@ namespace EL2.SyntheticHarmony.Patches
 
             try
             {
+                if (SyntheticApprovalLogic.IsHuman(__instance))
+                    return;
+
                 if (!SyntheticApprovalLogic.IsAI(__instance))
                     return;
 
@@ -43,7 +46,7 @@ namespace EL2.SyntheticHarmony.Patches
                 {
                     SyntheticHarmonyPlugin.Log.LogInfo(
                         "[SyntheticHarmony][DifficultyHook] Empire=" + empireIndex +
-                        " AI=True" +
+                        " Human=False" +
                         " BeforeBase=" + beforeBase +
                         " Applied=" + applied +
                         " AfterBase=" + afterBase +
