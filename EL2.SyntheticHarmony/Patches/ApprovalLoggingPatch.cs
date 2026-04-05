@@ -20,14 +20,12 @@ namespace EL2.SyntheticHarmony.Patches
         {
             if (empire == null)
                 return;
-            if (SyntheticApprovalLogic.IsHuman(empire))
-                return;
-
-            if (!SyntheticApprovalLogic.IsAI(empire))
-                return;
 
             try
             {
+                if (SyntheticApprovalLogic.IsHuman(empire))
+                    return;
+
                 if (!SyntheticApprovalLogic.IsAI(empire))
                     return;
 
@@ -35,12 +33,22 @@ namespace EL2.SyntheticHarmony.Patches
                     return;
 
                 int turn = SyntheticApprovalLogic.GetTurn();
+                if (turn <= 0)
+                    return;
+
                 if (turn == lastLoggedTurn)
+                    return;
+
+                // Let the maintenance patch own the threshold turns.
+                // That keeps total logging to one line per turn max.
+                if (turn % 10 == 0)
                     return;
 
                 lastLoggedTurn = turn;
 
                 int empireIndex = SyntheticApprovalLogic.GetEmpireIndex(empire);
+                int targetBaseSettlementApproval = SyntheticApprovalLogic.GetTargetAIBaseSettlementApproval();
+
                 string approval = SyntheticApprovalLogic.GetEmpireApprovalString(empire);
                 string baseSettlementApproval = SyntheticApprovalLogic.GetBaseSettlementApprovalString(empire);
                 string bonusApprovalOnSettlement = SyntheticApprovalLogic.GetBonusApprovalOnSettlementString(empire);
@@ -50,6 +58,7 @@ namespace EL2.SyntheticHarmony.Patches
                     "[SyntheticHarmony][Turn " + turn + "]" +
                     " Empire=" + empireIndex +
                     " AI=True" +
+                    " TargetBaseSettlementApproval=" + targetBaseSettlementApproval +
                     " Approval=" + approval +
                     " BaseSettlementApproval=" + baseSettlementApproval +
                     " BonusApprovalOnSettlement=" + bonusApprovalOnSettlement +

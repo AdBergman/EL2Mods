@@ -10,11 +10,15 @@ namespace EL2.SyntheticHarmony
         private const string SandboxManagerTypeName = "Amplitude.Mercury.Sandbox.SandboxManager";
         private const string SandboxTypeName = "Amplitude.Mercury.Sandbox.Sandbox";
 
-        internal const int TargetAIBaseSettlementApproval = 100;
-
         private static object cachedSandbox;
         private static MemberInfo sandboxTurnMember;
         private static bool initialized;
+        
+        internal static int GetTargetAIBaseSettlementApproval()
+        {
+            int turn = GetTurn();
+            return 75 + (turn / 10) * 5;
+        }
 
         internal static bool IsReady()
         {
@@ -483,6 +487,18 @@ namespace EL2.SyntheticHarmony
             }
 
             return null;
+        }
+        
+        internal static bool IsBaseSettlementApprovalEqualTo(object empire, int targetValue)
+        {
+            string current = GetBaseSettlementApprovalString(empire);
+            if (string.IsNullOrEmpty(current))
+                return false;
+
+            if (current.EndsWith(".00", StringComparison.Ordinal))
+                current = current.Substring(0, current.Length - 3);
+
+            return int.TryParse(current, out int parsed) && parsed == targetValue;
         }
     }
 }
