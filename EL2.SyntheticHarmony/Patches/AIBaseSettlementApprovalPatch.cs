@@ -30,12 +30,13 @@ namespace EL2.SyntheticHarmony.Patches
                     return;
 
                 int empireIndex = SyntheticApprovalLogic.GetEmpireIndex(__instance);
+                int targetBaseSettlementApproval = SyntheticApprovalLogic.GetTargetAIBaseSettlementApproval();
 
                 string beforeBase = SyntheticApprovalLogic.GetBaseSettlementApprovalString(__instance);
 
                 bool applied = SyntheticApprovalLogic.ForceAIBaseSettlementApproval(
                     __instance,
-                    SyntheticApprovalLogic.GetTargetAIBaseSettlementApproval());
+                    targetBaseSettlementApproval);
 
                 string afterBase = SyntheticApprovalLogic.GetBaseSettlementApprovalString(__instance);
                 string approval = SyntheticApprovalLogic.GetEmpireApprovalString(__instance);
@@ -53,7 +54,7 @@ namespace EL2.SyntheticHarmony.Patches
                         " Approval=" + approval +
                         " BonusApprovalOnSettlement=" + bonusApproval +
                         " SumOfApproval=" + sumOfApproval +
-                        " TargetBaseSettlementApproval=" + SyntheticApprovalLogic.GetTargetAIBaseSettlementApproval()
+                        " TargetBaseSettlementApproval=" + targetBaseSettlementApproval
                     );
 
                     if (applied)

@@ -7,8 +7,6 @@ namespace EL2.SyntheticHarmony.Patches
     [HarmonyPatch]
     internal static class AIBaseSettlementApprovalMaintenancePatch
     {
-        private static int lastProcessedTurn = -1;
-
         private static MethodBase TargetMethod()
         {
             Type type = AccessTools.TypeByName("Amplitude.Mercury.Simulation.DepartmentOfTheInterior");
@@ -69,8 +67,6 @@ namespace EL2.SyntheticHarmony.Patches
                     " SumOfApproval=" + sumOfApproval +
                     " TargetBaseSettlementApproval=" + targetBaseSettlementApproval
                 );
-
-                lastProcessedTurn = turn;
             }
             catch (Exception ex)
             {
